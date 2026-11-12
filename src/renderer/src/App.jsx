@@ -158,7 +158,7 @@ export default function App() {
               </div>
             )}
           </div>
-          {!workspace ? <div className="page"><p className="dim">Loading…</p></div> : !brand ? <NoBrand addBrand={() => setBrandDialog('new')} openOnboarding={openOnboarding} /> : (
+          {!workspace ? <div className="page"><p className="dim">Loading…</p></div> : !brand && page === 'settings' ? <Settings {...shared} /> : !brand ? <NoBrand addBrand={() => setBrandDialog('new')} openOnboarding={openOnboarding} /> : (
             <>
               {page === 'today' && <Today {...shared} />}
               {page === 'brand' && <Brand {...shared} />}
