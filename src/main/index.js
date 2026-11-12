@@ -32,6 +32,10 @@ let uiBridgeServer = null
 let inspectingUi = false
 const guideRequests = new Map()
 const ME = { actor: 'person' }
+// Tests (IV_SIGNAL_TEST_NO_OPEN=1) record outside links instead of opening the person's browser.
+const TEST_NO_OPEN = process.env.IV_SIGNAL_TEST_NO_OPEN === '1'
+const opened = []
+const openOut = (url) => (TEST_NO_OPEN ? opened.push(url) : shell.openExternal(url))
 
 function getDb() {
   if (!db) db = sg.openDb()
@@ -311,7 +315,7 @@ const METHODS = {
     const saved = sg.listChannels(getDb(), { brand_id: post.brand_id }).find((c) => c.channel === v.channel)
     const target = (saved?.url && networkLink(v.channel, saved.url)) || networkLink(v.channel, sg.CHANNELS[v.channel].compose)
     clipboard.writeText(v.text || '')
-    if (target) shell.openExternal(target)
+    if (target) openOut(target)
     return { copied: true, opened: target }
   },
   revealMedia: ({ id }) => {
@@ -349,9 +353,10 @@ const METHODS = {
   openChannel: ({ channel, url }) => {
     const target = networkLink(channel, url)
     if (!target) throw new Error('Only the network\'s own https links open from here.')
-    shell.openExternal(target)
+    openOut(target)
     return true
   },
+  ...(TEST_NO_OPEN ? { testOpened: () => opened.slice() } : {}),
   channelInfo: () => Object.entries(sg.CHANNELS).map(([key, c]) => ({ channel: key, ...c })),
   listEvents: (args) => sg.listEvents(getDb(), args),
 

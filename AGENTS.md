@@ -57,6 +57,8 @@ node scripts/chat-check.mjs claude <out-dir>   # one real chat turn on your own 
 npm.cmd run dist                               # dist\IV-Signal-Setup-<version>.exe (unsigned, per-user NSIS)
 node scripts/packaged-check.mjs                # packaged exe: MCP through ELECTRON_RUN_AS_NODE, then the window, on test data
 node scripts/update-check.mjs <older exe>      # a never-installing older copy must find, download and verify the latest release
+node scripts/e2e.mjs <out-dir>                 # click-through on three made-up brands: setup, Brand Brain, Create, Approve, Calendar, Library, Networks, Settings, tour (22 steps)
+node scripts/chat-e2e.mjs <out-dir> [claude,codex,hermes]  # real chat turns; the test clicks Allow and Don't allow in the window
 ```
 
 ## Releases and updates
@@ -78,9 +80,8 @@ node scripts/update-check.mjs <older exe>      # a never-installing older copy m
 
 ## Snapshot (2026-11-12)
 
-- Repo pushed to private github.com/hollisorg/iv-signal (`main`). Releases: v0.1.1 (the updater) and **v0.1.2
-  (latest)**: Settings opens before any brand exists, so a key can be added first. 0.1.2 installer SHA-256
-  `b066ce62…0e0018a89b`, unsigned.
+- Repo pushed to private github.com/hollisorg/iv-signal (`main`). Releases: v0.1.1 (the updater), v0.1.2 (Settings before a brand) and **v0.1.3 (latest)**: the tour's Next button styled as a main button, and the chat and MCP instructions say Brand Brain rules guide the writing and aren't post copy (Hermes had written "We do not give individual medical advice here" into a post). Unsigned.
+- Tested 2026-11-12 on made-up brands (Kiln & Co, Northside Physio, Volt Coffee Roasters): `e2e.mjs` 22/22 real-click steps; `chat-e2e.mjs` passed for Claude Code (20/8/14 s per turn), Codex (23/12/17 s) and Hermes (52/21/17 s): each drafted two posts within the Brand Brain, approved one after Allow was clicked in the window, and left the other a draft after Don't allow, with approvals logged as `chat:<engine>`.
 - Matt's PC runs **0.1.2** (installed by hand 2026-11-12 on his "Install 0.1.2": 0.1.0 closed normally first, silent per-user install through Explorer, exit 0, version 0.1.2.0, installed app.asar matches the build, `app-update.yml` present, reopened from the Desktop shortcut). Its updates need his key choice in Settings → Updates (a pasted key or the GitHub CLI option); until then it shows "Needs a key".
 - Verified: 6/6 tests; build; ui-check (every page at 1440 and 1100, no errors or overflow); a real Claude Code chat turn;
   packaged-check on 0.1.2 (MCP 32 tools, all 8 pages); real updates from the private repo: a never-installing copy
