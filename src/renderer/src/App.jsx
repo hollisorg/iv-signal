@@ -16,6 +16,7 @@ import Calendar from './pages/Calendar'
 import Library from './pages/Library'
 import Channels from './pages/Channels'
 import Settings from './pages/Settings'
+import { UpdateButton } from './components/UpdateSettings'
 
 const NAV = [
   { id: 'today', label: 'Today' },
@@ -130,6 +131,7 @@ export default function App() {
                 <Meter label="Brand Brain notes" n={counts.brain} cap={Math.max(20, counts.brain)} />
               </>
             )}
+            <UpdateButton />
             <p className="side-brand mono">Infinite Variance / Signal</p>
           </div>
         </nav>

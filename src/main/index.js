@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, clipboard, dialog, nativeImage, protocol, net } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, clipboard, dialog, nativeImage, protocol, net, safeStorage } from 'electron'
 import { join, dirname, extname } from 'node:path'
 import { existsSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -18,6 +18,7 @@ import { startUiBridge, UI_SNAPSHOT, MASK_SCREEN, UNMASK_SCREEN } from '../servi
 import { PLACES, guidePlaces } from '../renderer/src/guides.js'
 import { importBrandImage, brandImage } from '../service/brand-assets.js'
 import { onboardingStatus, saveOnboarding, finishOnboarding } from '../service/onboarding.js'
+import { initUpdater, updateState, REPO } from './updater.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const APP = 'IV Signal'
@@ -182,6 +183,20 @@ const cleanContext = (c = {}) => ({
   timezone: String(c.timezone || '').slice(0, 60),
 })
 
+// --- Updates: the private repo needs a read key on this PC (kept encrypted with the OS), or the GitHub CLI's sign-in ---
+let updater = { check: async () => updateState(), install: () => false }
+function savedUpdateKey() {
+  const enc = readSettings().updateKeyEnc
+  if (!enc || !safeStorage.isEncryptionAvailable()) return null
+  try {
+    return safeStorage.decryptString(Buffer.from(enc, 'base64'))
+  } catch {
+    return null
+  }
+}
+const updateKeys = () => ({ savedKey: savedUpdateKey(), useGh: readSettings().updateUseGh === true })
+const updateView = () => ({ ...updateState(), hasKey: !!readSettings().updateKeyEnc, useGh: readSettings().updateUseGh === true, repo: `${REPO.owner}/${REPO.repo}` })
+
 const withArt = (b) => ({ ...b, art: { logo: brandImage(sg.defaultDataDir(), b.profile.logo_id), cover: brandImage(sg.defaultDataDir(), b.profile.cover_id) } })
 
 const METHODS = {
@@ -226,6 +241,23 @@ const METHODS = {
     if (sendNow && !chatTurn) return METHODS.chatSend({ text, context: chatContext, engine: composer.engine })
     return METHODS.chatSetComposer({ text, tab: 'chat' })
   },
+
+  // updates
+  updateState: () => updateView(),
+  updateCheck: async () => { await updater.check(); return updateView() },
+  updateInstall: () => updater.install(),
+  updateSaveKey: async ({ key }) => {
+    const token = String(key || '').trim()
+    if (!/^(github_pat_|ghp_|gho_)[A-Za-z0-9_]{20,}$/.test(token)) throw new Error('That doesn’t look like a GitHub key. It starts with github_pat_ or ghp_.')
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('This PC can’t encrypt the key, so IV Signal won’t store it.')
+    const r = await net.fetch(`https://api.github.com/repos/${REPO.owner}/${REPO.repo}`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'IV-Signal' } })
+    if (!r.ok) throw new Error(r.status === 404 || r.status === 403 ? `That key can’t read ${REPO.owner}/${REPO.repo}. Give it read access to that repository’s contents.` : `GitHub said ${r.status}. Check the key and try again.`)
+    writeSettings({ updateKeyEnc: safeStorage.encryptString(token).toString('base64') })
+    await updater.check()
+    return updateView()
+  },
+  updateClearKey: () => { writeSettings({ updateKeyEnc: null }); return updateView() },
+  updateUseGh: async ({ on }) => { writeSettings({ updateUseGh: !!on }); if (on) await updater.check(); return updateView() },
 
   // brands
   workspaceState: () => ({ brands: sg.listBrands(getDb()).map(withArt), brandId: readSettings().selectedBrandId || null }),
@@ -327,7 +359,7 @@ const METHODS = {
     clipboard.writeText(String(text || ''))
     return { copied: true }
   },
-  appSettings: () => readSettings(),
+  appSettings: () => { const { updateKeyEnc, ...rest } = readSettings(); return rest },
   saveAppSettings: (patch) => {
     const clean = {}
     if (['claude', 'codex', 'hermes', ''].includes(patch.chatEngine)) clean.chatEngine = patch.chatEngine
@@ -563,6 +595,7 @@ else {
       /* The chat still works without visual guidance. */
     }
     createWindow()
+    updater = initUpdater((state) => send('update:changed', { ...state, hasKey: !!readSettings().updateKeyEnc, useGh: readSettings().updateUseGh === true, repo: `${REPO.owner}/${REPO.repo}` }), updateKeys)
   })
   let cleanedUp = false
   app.on('before-quit', () => {

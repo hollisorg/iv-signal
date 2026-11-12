@@ -13,6 +13,7 @@ export const PLACES = {
   library: { page: 'library', selector: '[data-guide="library"]', title: 'Your library', text: 'Pictures and videos for your posts. Add a description to each picture so people using screen readers know what\'s in it.' },
   channels: { page: 'channels', selector: '[data-guide="channels"]', title: 'Where you post', text: 'Add each network account. Publishing straight from IV Signal comes later; for now you post approved versions yourself in a click or two.' },
   agent: { page: 'settings', selector: '#setup-agent', title: 'Bring your own agent', text: 'The chat runs on your own Claude Code, Codex or Hermes, on your own plan. IV Signal needs no API key of its own.' },
+  updates: { page: 'settings', selector: '#setup-updates', title: 'Staying up to date', text: 'IV Signal checks its private releases on launch and every six hours, downloads in the background and installs when you restart. Each PC needs a read-only GitHub key, or your GitHub CLI sign-in.' },
   connections: { page: 'settings', selector: '#setup-connections', title: 'Use it from your other apps', text: 'Connect IV Signal to Claude Code, Codex or Claude Desktop. They work on the same brands and posts.' },
 }
 export const GUIDES = {
@@ -23,7 +24,7 @@ export const GUIDES = {
   calendar: ['calendar', 'to_post'],
   library: ['library'],
   channels: ['channels'],
-  settings: ['agent', 'connections'],
+  settings: ['agent', 'connections', 'updates'],
 }
 export const startGuide = (page) => window.dispatchEvent(new CustomEvent('iv:guide', { detail: { steps: GUIDES[page] || GUIDES.today } }))
 export const guidePlaces = () => Object.entries(PLACES).map(([id, { page, title, text }]) => ({ id, page, title, about: text }))

@@ -2,7 +2,7 @@
 // allowlist, and a few named event streams (chat updates, agent setup progress, data changes).
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
-const STREAMS = new Set(['chat:changed', 'agents:setupChanged', 'data:changed', 'chat:window', 'chat:composer', 'ui:guide'])
+const STREAMS = new Set(['chat:changed', 'agents:setupChanged', 'data:changed', 'chat:window', 'chat:composer', 'ui:guide', 'update:changed'])
 
 contextBridge.exposeInMainWorld('ivsignal', {
   call: (method, args) => ipcRenderer.invoke('ivsignal:call', method, args),
