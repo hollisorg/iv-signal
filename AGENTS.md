@@ -56,26 +56,42 @@ node scripts/ui-check.mjs <out-dir> --empty    # first run
 node scripts/chat-check.mjs claude <out-dir>   # one real chat turn on your own Claude Code (or codex / hermes)
 npm.cmd run dist                               # dist\IV-Signal-Setup-<version>.exe (unsigned, per-user NSIS)
 node scripts/packaged-check.mjs                # packaged exe: MCP through ELECTRON_RUN_AS_NODE, then the window, on test data
+node scripts/update-check.mjs <older exe>      # a never-installing older copy must find, download and verify the latest release
 ```
+
+## Releases and updates
+
+- Code and releases are **private** (Matt's choice, 2026-11-12): github.com/hollisorg/iv-signal. No public download.
+- The app updates itself with electron-updater's private GitHub provider (`src/main/updater.js`): on launch and every six
+  hours it downloads in the background; "Restart to update" (Settings → Updates, or the sidebar button) or quitting
+  installs. Each PC needs a read key: a fine-grained token with Contents read-only on that repo, pasted in Settings →
+  Updates (checked against GitHub, then stored with safeStorage as `updateKeyEnc`), or the GitHub CLI sign-in
+  (`updateUseGh`, read with `gh auth token` at each check, never stored).
+- To release: bump `version` in package.json, `npm.cmd test`, `npm.cmd run dist`, `node scripts/packaged-check.mjs`, commit,
+  tag `v<version>`, push both, then
+  `gh release create v<version> dist/IV-Signal-Setup-<version>.exe dist/IV-Signal-Setup-<version>.exe.blockmap dist/latest.yml --repo hollisorg/iv-signal`.
+  To test the update itself: build an older label with
+  `npx.cmd electron-builder --win --x64 --dir --publish never -c.extraMetadata.version=0.1.0 -c.directories.output=<dir>`,
+  copy `dist/win-unpacked/resources/app-update.yml` into it, and run `scripts/update-check.mjs` (it sets
+  `IV_SIGNAL_UPDATE_NO_INSTALL=1`). Afterwards delete only `%LOCALAPPDATA%\iv-signal-updater\pending`; `installer.exe` there
+  belongs to the real install.
 
 ## Snapshot (2026-11-12)
 
-- Local repo `C:\Users\Matthew\iv-signal`, branch `main`, no remote, nothing committed yet (all files staged). Version
-  0.1.0.
-- Installer built: `dist\IV-Signal-Setup-0.1.0.exe`, 115 MB, SHA-256 `6763b5f8…58654e0b41`, **not code-signed**
-  (Windows SmartScreen will warn). Per-user, lets the person choose the folder. **Installed on Matt's PC** 2026-11-12
-  (his "Install it"): silent `/S /currentuser` through Explorer, exit 0, `%LOCALAPPDATA%\Programs\IV Signal`, version
-  0.1.0.0, Desktop and Start menu shortcuts; installed app.asar matches the build; opened from the Desktop shortcut
-  (parent explorer.exe), data in the real `%APPDATA%\IV Signal`. Not released.
-- Verified: 6/6 tests; build; ui-check with no page errors and no overflow on any page at 1440 and 1100; one real
-  Claude Code chat turn drafted a LinkedIn post from the Brand Brain in 23 s (created_by `chat:claude`, left as a draft);
-  packaged-check: the packaged MCP lists 32 tools and drafts a post, and the packaged window (version 0.1.0) opens all
-  8 pages with no page errors and shows that post. The bundle holds the MCP SDK's full dependency tree.
-- Not verified: running the installer itself, Codex and Hermes chat turns, Mac and Linux, dragging files from Explorer
-  into the Library, the Allow card in the window (tested at the MCP layer).
+- Repo pushed to private github.com/hollisorg/iv-signal (`main`). Releases: v0.1.1 (the updater) and **v0.1.2
+  (latest)**: Settings opens before any brand exists, so a key can be added first. 0.1.2 installer SHA-256
+  `b066ce62…0e0018a89b`, unsigned.
+- Matt's PC runs **0.1.0** (installed 2026-11-12 on his OK), which has no updater: it needs one manual install of 0.1.2,
+  and then a key or the GitHub CLI option in Settings → Updates.
+- Verified: 6/6 tests; build; ui-check (every page at 1440 and 1100, no errors or overflow); a real Claude Code chat turn;
+  packaged-check on 0.1.2 (MCP 32 tools, all 8 pages); real updates from the private repo: a never-installing copy
+  labelled 0.1.0 found, downloaded and verified 0.1.1 (18 s) and then 0.1.2 (15 s) using the GitHub CLI sign-in; 0.1.2
+  itself reports "current".
+- Not verified: an installed copy actually installing an update (the test copies are set never to install), a pasted
+  fine-grained key (the CLI path was used), Codex and Hermes chat turns, Mac and Linux, file drops from Explorer, the
+  Allow card in the window.
 
 ## Next
 
-Matt's review of 0.1.0 (install with his OK). Then the connection to the PostingPilot backend for publishing once the
-network reviews pass (see the build plan's Phase 0 to 2). Code signing and a self-updater (IV Studio's pattern) before
-anyone else gets it.
+Install 0.1.2 on Matt's PC (his OK) and choose his key source; the release after that is the first real self-update.
+Then the PostingPilot backend for publishing once the network reviews pass (build plan Phases 0 to 2), and code signing.
