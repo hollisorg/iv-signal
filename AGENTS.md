@@ -81,8 +81,7 @@ node scripts/update-check.mjs <older exe>      # a never-installing older copy m
 - Repo pushed to private github.com/hollisorg/iv-signal (`main`). Releases: v0.1.1 (the updater) and **v0.1.2
   (latest)**: Settings opens before any brand exists, so a key can be added first. 0.1.2 installer SHA-256
   `b066ce62…0e0018a89b`, unsigned.
-- Matt's PC runs **0.1.0** (installed 2026-11-12 on his OK), which has no updater: it needs one manual install of 0.1.2,
-  and then a key or the GitHub CLI option in Settings → Updates.
+- Matt's PC runs **0.1.2** (installed by hand 2026-11-12 on his "Install 0.1.2": 0.1.0 closed normally first, silent per-user install through Explorer, exit 0, version 0.1.2.0, installed app.asar matches the build, `app-update.yml` present, reopened from the Desktop shortcut). Its updates need his key choice in Settings → Updates (a pasted key or the GitHub CLI option); until then it shows "Needs a key".
 - Verified: 6/6 tests; build; ui-check (every page at 1440 and 1100, no errors or overflow); a real Claude Code chat turn;
   packaged-check on 0.1.2 (MCP 32 tools, all 8 pages); real updates from the private repo: a never-installing copy
   labelled 0.1.0 found, downloaded and verified 0.1.1 (18 s) and then 0.1.2 (15 s) using the GitHub CLI sign-in; 0.1.2
@@ -93,5 +92,5 @@ node scripts/update-check.mjs <older exe>      # a never-installing older copy m
 
 ## Next
 
-Install 0.1.2 on Matt's PC (his OK) and choose his key source; the release after that is the first real self-update.
+Matt picks his key source in Settings → Updates; the next release is the first real self-update on his PC.
 Then the PostingPilot backend for publishing once the network reviews pass (build plan Phases 0 to 2), and code signing.
