@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+data/
+*.db
+*.db-wal
+*.db-shm
+.env*
+*.secret.json
+build/icon-256.png
+docs/verification/

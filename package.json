@@ -1,0 +1,67 @@
+{
+  "name": "iv-signal",
+  "productName": "IV Signal",
+  "version": "0.1.0",
+  "description": "Desktop marketing workstation: a Brand Brain for each brand, posts written once for every network, approval, a calendar and a media library, driven by your own Claude Code, Codex or Hermes.",
+  "author": "The Hollis Organization",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
+    "mcp": "node src/mcp/server.js",
+    "dist": "electron-vite build && electron-builder --win --x64 --publish never",
+    "dist:dir": "electron-vite build && electron-builder --win --x64 --dir --publish never"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^6.0.0",
+    "playwright": "^1.65.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "vite": "^8.3.4"
+  },
+  "main": "./out/main/index.js",
+  "build": {
+    "appId": "org.hollis.ivsignal",
+    "productName": "IV Signal",
+    "copyright": "(c) 2026 The Hollis Organization",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "to": "icon.png",
+        "from": "build/icon.png"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "IV-Signal-Setup-${version}.exe"
+    }
+  }
+}
