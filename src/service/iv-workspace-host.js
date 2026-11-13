@@ -10,7 +10,7 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
   const isolatedProfile = appId === 'studio' ? process.env.IV_STUDIO_USER_DATA : appId === 'signal' ? process.env.IV_SIGNAL_DATA_DIR : process.env.FITSCOUT_DATA_DIR
   const root = process.env.IV_WORKSPACE_DIR || (isolatedProfile ? join(dataDir, 'iv-workspace-test') : undefined)
   const get = () => {
-    if (disabled) throw Error('IV Workspace is unavailable in Incognito. Return to your regular workspace to share.')
+    if (disabled) throw Error('Hivemind is unavailable in Incognito. Return to your regular workspace to share.')
     return store ||= new IVWorkspace({ root, appId, profile: dataDir })
   }
   const native = id => nativeBrands?.().find(b => b.id === id)
@@ -25,11 +25,11 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
   }
   const launch = async h => {
     const info = installed(h.target)
-    if (!info.ready) throw Error(`Update and open ${APPS[h.target]} once to connect it. Your handoff is saved in IV Workspace.`)
+    if (!info.ready) throw Error(`Update and open ${APPS[h.target]} once to connect it. Your handoff is saved in Hivemind.`)
     if (process.env.IV_WORKSPACE_TEST === '1' && process.env.IV_WORKSPACE_NO_LAUNCH === '1') return
     await new Promise((ok, no) => {
       const child = spawn(info.executable, [`--iv-handoff=${h.id}`], { detached: true, stdio: 'ignore', windowsHide: false })
-      child.once('error', () => no(Error(`Could not open ${info.name}. Open its IV Workspace to continue.`)))
+      child.once('error', () => no(Error(`Could not open ${info.name}. Open its Hivemind to continue.`)))
       child.once('spawn', () => { child.unref(); ok() })
     })
   }
@@ -44,7 +44,7 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
     if (link) {
       const shared = w.brand(link.brandId)
       if (link.fingerprint === fp) return shared
-      if (shared.revision !== link.revision && !preferLocal) throw Error('This business changed in both apps. Choose which profile to use in IV Workspace.')
+      if (shared.revision !== link.revision && !preferLocal) throw Error('This business changed in both apps. Choose which profile to use in Hivemind.')
       const b = w.saveBrand({ ...profile, logo: nativeLogo(), id: shared.id }, shared.revision)
       w.setLink(id, { brandId: b.id, revision: b.revision, fingerprint: fp }); return b
     }
