@@ -4,7 +4,7 @@ import './HivemindMark.css'
 
 // The supplied logo is used unchanged. Motion belongs to its surrounding UI.
 export function HivemindMark({ active = false, size = 'normal' }) {
-  return <span className={`hm-mark hm-${size}${active ? ' hm-active' : ''}`} aria-hidden="true"><span className="hm-aura"/><span className="hm-orbit"/><img src={logo} alt="" draggable="false"/></span>
+  return <span className={`hm-mark hm-${size}${active ? ' hm-active' : ''}`} aria-hidden="true"><span className="hm-aura"/><img src={logo} alt="" draggable="false"/></span>
 }
 
 export function HivemindLoading({ label }) {
