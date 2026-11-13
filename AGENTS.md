@@ -71,8 +71,8 @@ node scripts/release.mjs --unsigned [--dry]    # tests, build, installer, packag
   itself is public, and its app.asar is readable like any Electron app.
 - The app updates itself with electron-updater's GitHub provider on that public repo (`src/main/updater.js`), no key or
   sign-in: on launch and every six hours it downloads in the background; "Restart to update" (Settings → Updates, or the
-  sidebar button) or quitting installs. 0.1.1 to 0.1.4 read the private repo and needed a key; a copy on those versions
-  needs one manual install of 0.1.5 or later.
+  sidebar button) or quitting installs. 0.1.1 to 0.1.7 read the private repo and needed a key; a copy on those versions
+  needs one manual install of 0.1.8 or later. **Every release from 0.1.8 on must go to hollisorg/iv-signal-releases** (scripts/release.mjs does it); a release only on the private repo never reaches anyone.
 - To release: bump `version` in package.json, write `dist/notes-<version>.md`, commit, then `node scripts/release.mjs --unsigned`
   (tests, build, installer, packaged check, tag and push to the private repo, release on hollisorg/iv-signal-releases).
   To test the update itself: build an older label with
