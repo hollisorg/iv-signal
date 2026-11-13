@@ -67,7 +67,7 @@ export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, 
     }).catch(e => setError(e.message))
   }
   return <>
-    <button type="button" className="ivw-launch" onClick={showWorkspace} disabled={disabled} title={disabled ? 'Shared workspace is off in Incognito' : 'Continue across your IV apps'}><HivemindMark size="small"/> Hivemind</button>
+    <button type="button" className="ivw-launch" onClick={showWorkspace} disabled={disabled} title={disabled ? 'Shared workspace is off in Incognito' : 'Continue across your IV apps'}><HivemindMark size="small"/><span>Hivemind</span></button>
     <HivemindLoading label={transition}/>
     {open && createPortal(<div className="ivw-backdrop" onMouseDown={e => { if (e.target === e.currentTarget && !busy) setOpen(false) }}>
       <section className="ivw-panel" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="ivw-title">

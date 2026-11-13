@@ -1,10 +1,10 @@
 # Hivemind: local app continuity
 
-This build connects IV Outreach 0.12.1, IV Studio 1.1.11 and IV Signal 0.1.6 on one Windows account. It does not require a new account, server or provider subscription.
+This build connects IV Outreach 0.12.2, IV Studio 1.1.12 and IV Signal 0.1.7 on one Windows account. It does not require a new account, server or provider subscription.
 
 ## Use it
 
-1. Open each updated app once. The **Hivemind** button in its top bar shows the other connected apps.
+1. Open each updated app once. The red **Hivemind** button in its top bar shows the other connected apps.
 2. In Outreach, choose your business and campaign, then Scanning → Content briefs. Prepare a brief and select **Create in IV Studio**. The business is linked to the shared workspace and Studio opens a native project with the campaign, offer, audience, voice, visual direction and source evidence in its creative notes.
 3. Work on the project in Studio using its existing tools. When ready, open **Hivemind**, select that handoff, choose the finished picture/video files, review a caption and network, then select **Prepare in IV Signal**.
 4. Signal opens a native unapproved post draft with the selected media copied into its own library. Review the wording, media, alt text and network checks before using Signal's existing approval/publishing controls.
