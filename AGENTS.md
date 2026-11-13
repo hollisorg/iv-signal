@@ -59,6 +59,8 @@ node scripts/packaged-check.mjs                # packaged exe: MCP through ELECT
 node scripts/update-check.mjs <older exe>      # a never-installing older copy must find, download and verify the latest release
 node scripts/e2e.mjs <out-dir>                 # click-through on three made-up brands: setup, Brand Brain, Create, Approve, Calendar, Library, Networks, Settings, tour (22 steps)
 node scripts/chat-e2e.mjs <out-dir> [claude,codex,hermes]  # real chat turns; the test clicks Allow and Don't allow in the window
+node scripts/facebook-check.mjs <out-dir>      # Networks tiles and pop-ups, Facebook connect/schedule/post now/cancel against a stand-in Graph API, tour walks (12 steps)
+node scripts/release.mjs --unsigned [--dry]    # tests, build, installer, packaged check, tag, push, private release (signs when the Azure values are set; docs/CODE-SIGNING.md)
 ```
 
 ## Releases and updates
@@ -78,20 +80,18 @@ node scripts/chat-e2e.mjs <out-dir> [claude,codex,hermes]  # real chat turns; th
   `IV_SIGNAL_UPDATE_NO_INSTALL=1`). Afterwards delete only `%LOCALAPPDATA%\iv-signal-updater\pending`; `installer.exe` there
   belongs to the real install.
 
-## Snapshot (2026-11-12)
+## Snapshot (2026-11-13)
 
-- Repo pushed to private github.com/hollisorg/iv-signal (`main`). Releases: v0.1.1 (the updater), v0.1.2 (Settings before a brand) and **v0.1.3 (latest)**: the tour's Next button styled as a main button, and the chat and MCP instructions say Brand Brain rules guide the writing and aren't post copy (Hermes had written "We do not give individual medical advice here" into a post). Unsigned.
-- Tested 2026-11-12 on made-up brands (Kiln & Co, Northside Physio, Volt Coffee Roasters): `e2e.mjs` 22/22 real-click steps; `chat-e2e.mjs` passed for Claude Code (20/8/14 s per turn), Codex (23/12/17 s) and Hermes (52/21/17 s): each drafted two posts within the Brand Brain, approved one after Allow was clicked in the window, and left the other a draft after Don't allow, with approvals logged as `chat:<engine>`.
-- Matt's PC runs **0.1.2** (installed by hand 2026-11-12 on his "Install 0.1.2": 0.1.0 closed normally first, silent per-user install through Explorer, exit 0, version 0.1.2.0, installed app.asar matches the build, `app-update.yml` present, reopened from the Desktop shortcut). Its updates need his key choice in Settings → Updates (a pasted key or the GitHub CLI option); until then it shows "Needs a key".
-- Verified: 6/6 tests; build; ui-check (every page at 1440 and 1100, no errors or overflow); a real Claude Code chat turn;
-  packaged-check on 0.1.2 (MCP 32 tools, all 8 pages); real updates from the private repo: a never-installing copy
-  labelled 0.1.0 found, downloaded and verified 0.1.1 (18 s) and then 0.1.2 (15 s) using the GitHub CLI sign-in; 0.1.2
-  itself reports "current".
-- Not verified: an installed copy actually installing an update (the test copies are set never to install), a pasted
-  fine-grained key (the CLI path was used), Codex and Hermes chat turns, Mac and Linux, file drops from Explorer, the
-  Allow card in the window.
+- **v0.1.4 is the latest private release** (2026-11-13, unsigned, installer SHA-256 `39fb0998…`, the downloaded release file matches the build). It adds:
+  - **Networks:** one tile per network with its logo (Simple Icons, CC0; LinkedIn is a drawn "in" tile because Simple Icons dropped it); Connect/Manage opens a pop-up with the account and how posting works there.
+  - **Facebook Page publishing** (`src/service/meta.js`): the person pastes a Page access token made in Graph API Explorer; it's checked (`/me` must be a Page), kept with safeStorage per brand (`settings.meta[brand_id].tokenEnc`, never returned by `appSettings`) and sent only as a Bearer header. Approved Facebook versions are scheduled on Facebook itself (`published=false` + `scheduled_publish_time`, 11 min to 29 days ahead) from the Calendar, or posted now after a confirm; pictures go up through `/photos`, videos stay by hand. `deliveries` (migration 3) records each hand-off; a scheduled version can't be edited, removed or archived until it's cancelled; every 3 minutes the app asks Facebook about due ones and marks them posted with the link. Agents have no publish tool, on purpose. Instagram needs pictures at a public address, so it waits for the server.
+  - **Make a picture** with the person's Codex (`src/service/pictures.js`), **From IV Studio** imports (`src/service/ivstudio.js`, through IV Studio's MCP `list_renders`/`list_images` plus its Videos folders), **results** per posted version (`results`, migration 2; MCP `signal_results`, `signal_record_results`), and **approval packs** (`src/service/approvalpack.js`, one self-contained HTML page).
+  - Tours for each; MCP now 37 tools.
+- The **Infinite Variance** brand is set up in Matt's real IV Signal (2026-11-12, through the installed MCP): profile, Never say list, 11 Brand Brain notes from infinitevariance.ai and the approved slogans, X/Instagram/YouTube/LinkedIn, the "IV Studio and IV Academy push" campaign and 7 library items (1.1 trailer, 1.1.7 demo, 5 README screenshots).
+- Verified for 0.1.4: 12/12 unit tests (new `test/features.test.mjs`: results, delivery locks, channel status, approval pack escaping, picture prompt, meta.js against a stand-in Graph API); ui-check clean; `e2e.mjs` 22/22; `facebook-check.mjs` 12/12; packaged check (37 tools, 8 pages, version 0.1.4).
+- Not verified: a real Facebook Page (needs Matt's token), a real Codex picture run inside the app, a real IV Studio import into Matt's data from the window, signing, Mac/Linux.
+- Matt's PC runs **0.1.2**; it picks up 0.1.4 by itself once Settings → Updates has a key or the GitHub CLI option.
 
 ## Next
 
-Matt picks his key source in Settings → Updates; the next release is the first real self-update on his PC.
-Then the PostingPilot backend for publishing once the network reviews pass (build plan Phases 0 to 2), and code signing.
+Matt: choose the update key source (then 0.1.4 installs itself), paste a Facebook Page token on Networks → Facebook to post directly, and set up Azure Artifact Signing (docs/CODE-SIGNING.md). Then the PostingPilot server for Instagram and the other networks once their reviews pass.
