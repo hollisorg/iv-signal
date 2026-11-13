@@ -1,5 +1,6 @@
 // Stable, named places shared by the visual guide and the agent. No arbitrary selectors from agents.
 export const PLACES = {
+  iv_workspace: { page: 'today', selector: '.ivw-launch', title: 'Your connected IV workspace', text: 'Receive business profiles, creative context and selected files from your IV apps. Handoffs open as unapproved drafts; review before approving or publishing.' },
   brand_switch: { page: 'today', selector: '[data-guide="workspace"]', title: 'Your brand', text: 'Choose which brand you\'re working on. Each brand has its own Brand Brain, posts, calendar and library.' },
   today: { page: 'today', selector: '.signal-ask', title: 'Start with an idea', text: 'Say what you want to post about in plain words. Your own Claude Code, Codex or Hermes drafts it in your brand\'s voice for each network.' },
   to_post: { page: 'today', selector: '[data-guide="to-post"]', fallback: '.tiles', title: 'Ready to post', text: 'Approved posts whose time has come. Copy & open puts the words on your clipboard and opens the network; paste, post, then mark it posted.' },
@@ -22,7 +23,7 @@ export const PLACES = {
   connections: { page: 'settings', selector: '#setup-connections', title: 'Use it from your other apps', text: 'Connect IV Signal to Claude Code, Codex or Claude Desktop. They work on the same brands and posts.' },
 }
 export const GUIDES = {
-  today: ['brand_switch', 'today', 'to_post', 'brain_profile', 'create', 'approve', 'calendar', 'channels', 'agent'],
+  today: ['iv_workspace', 'brand_switch', 'today', 'to_post', 'brain_profile', 'create', 'approve', 'calendar', 'channels', 'agent'],
   brand: ['brain_profile', 'brain_never', 'brain_notes'],
   create: ['create', 'checks', 'approve'],
   approve: ['approve', 'checks', 'approval_pack'],

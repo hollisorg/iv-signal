@@ -1,3 +1,5 @@
+import IVWorkspace from './components/IVWorkspace'
+const ivWorkspaceApi = (method,args) => call('ivWorkspace',{method,args})
 import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useData, call, on } from './api'
@@ -93,6 +95,7 @@ export default function App() {
       <header className="titlebar">
         <div className="titlebar-brand"><Wordmark tone="light" /></div>
         <div className="titlebar-mid">
+          <IVWorkspace api={ivWorkspaceApi} appId="signal" nativeId={brand?.id} nativeName={brand?.name} onOpen={async r => {setShowOnboarding(false);await reloadWorkspace();if(r.localId)selectBrand(r.localId);if(r.kind==='post'){const draft=await call('getPost',{id:r.id});setPost(draft);setPage('create')}else if(r.kind==='brand')setPage('brand')}} />
           <span className="badge" title={agent ? `The chat runs on your ${AGENT[agent]}` : 'No agent installed yet'}>
             <span className={`dot ${agent ? 'ok' : ''}`} />
             <span className="mono">{agent ? AGENT[agent] : 'No agent'}</span>

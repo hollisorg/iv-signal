@@ -95,3 +95,6 @@ node scripts/release.mjs --unsigned [--dry]    # tests, build, installer, packag
 ## Next
 
 Matt: choose the update key source (then 0.1.4 installs itself), paste a Facebook Page token on Networks → Facebook to post directly, and set up Azure Artifact Signing (docs/CODE-SIGNING.md). Then the PostingPilot server for Instagram and the other networks once their reviews pass.
+
+## IV Workspace integration (0.1.5, local build)
+The IV Workspace top-bar button connects shared business basics and local creative handoffs. Incoming work opens as a native unapproved draft with selected media copied into the library. The shared store is separate; credentials, Never say rules and approvals stay local to Signal. See docs/iv-workspace.md. Tests add native import idempotency and rollback. Publication status is recorded separately; this source note does not establish a released or installed version.

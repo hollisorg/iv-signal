@@ -204,16 +204,20 @@ export function openDb(file) {
   return db
 }
 
+const transactionDepth = new WeakMap()
 export function tx(db, fn) {
-  db.exec('begin immediate')
+  const depth=transactionDepth.get(db)||0,savepoint=`iv_nested_${depth}`
+  db.exec(depth?`savepoint ${savepoint}`:'begin immediate')
+  transactionDepth.set(db,depth+1)
   try {
     const result = fn()
-    db.exec('commit')
+    if(result&&typeof result.then==='function')throw Error('Database transactions must be synchronous.')
+    db.exec(depth?`release ${savepoint}`:'commit')
     return result
   } catch (err) {
-    db.exec('rollback')
+    db.exec(depth?`rollback to ${savepoint}; release ${savepoint}`:'rollback')
     throw err
-  }
+  } finally { if(depth)transactionDepth.set(db,depth);else transactionDepth.delete(db) }
 }
 
 export const now = () => new Date().toISOString()

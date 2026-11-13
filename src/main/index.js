@@ -1,3 +1,5 @@
+import { workspaceHost } from '../service/iv-workspace-host.js'
+import { receiveSignal } from '../service/iv-workspace-import.js'
 import { app, BrowserWindow, ipcMain, shell, clipboard, dialog, nativeImage, protocol, net, safeStorage } from 'electron'
 import { join, dirname, extname } from 'node:path'
 import { existsSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs'
@@ -271,7 +273,32 @@ async function checkDueDeliveries() {
 
 const withArt = (b) => ({ ...b, art: { logo: brandImage(sg.defaultDataDir(), b.profile.logo_id), cover: brandImage(sg.defaultDataDir(), b.profile.cover_id) } })
 
+
+const ivWorkspace = workspaceHost({ appId: 'signal', dataDir: sg.defaultDataDir(),
+  nativeBrands: () => sg.listBrands(getDb()),
+  importBrand: (brand, linkedId, workspace) => {
+    const db = getDb(), key = 'iv-workspace-brand:' + brand.id
+    const id = linkedId || sg.getSetting(db, key)
+    const existing = id ? sg.getBrand(db, id) : null
+    const profile = Object.fromEntries(['website','offer','audience','voice','visual','location','goal','accent'].map(k => [k, brand[k]]))
+    profile.logo_id = brand.logo ? importBrandImage(sg.defaultDataDir(), workspace.assetPath(brand.logo), 'logo', nativeImage).id : ''
+    const result = sg.tx(db, () => {
+      const b = existing ? sg.updateBrand(db, existing.id, {name:brand.name,profile}) : sg.createBrand(db, {name:brand.name,profile})
+      sg.setSetting(db, key, b.id); return b
+    })
+    changed('ivWorkspaceBrand', result); return result
+  },
+  receive: (handoff, workspace, useBrand) => {
+    const prior = sg.getSetting(getDb(), 'iv-workspace-receipt:' + handoff.id)
+    const brand = prior ? {localId:prior.localId} : useBrand(handoff.brandId)
+    const result = receiveSignal(handoff, workspace, getDb(), brand.localId, sg.defaultDataDir())
+    writeSettings({selectedBrandId:result.localId}); changed('ivWorkspaceDraft',result); return result
+  },
+})
+app.on('open-url', (event, url) => { event.preventDefault(); ivWorkspace.capture([url]) })
+
 const METHODS = {
+  ivWorkspace: ({method,args}) => { if (!Object.hasOwn(ivWorkspace.api, method)) throw Error('Unknown workspace action.'); return ivWorkspace.api[method](args || {}) },
   // welcome
   onboardingStatus: () => onboardingStatus(getDb()),
   onboardingSave: (args) => saveOnboarding(getDb(), args),
@@ -767,10 +794,12 @@ app.setPath('userData', sg.defaultDataDir())
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) app.quit()
 else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, args) => {
+    ivWorkspace.capture(args)
     if (win) { if (win.isMinimized()) win.restore(); win.focus() }
   })
   app.whenReady().then(async () => {
+    ivWorkspace.ready()
     protocol.handle('ivmedia', serveMedia)
     try {
       uiBridgeServer = await startUiBridge({ places: () => guidePlaces(), inspect: inspectUi, show: showUi })
