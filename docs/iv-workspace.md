@@ -42,3 +42,5 @@ Back up the three native profiles before installation. Outreach's native schema 
 Next phases: selecting existing Studio library outputs without a file picker, an app-wide shared asset browser, progress callbacks from generation/publishing, then optional account and cross-device synchronization.
 
 Hivemind is the shared workspace name across all three products. Existing internal IDs, app links and the legacy IV Workspace storage folder are retained so saved brands and handoffs remain available. Studio builds and their source patches stay private.
+
+Hivemind uses the supplied IV eye/infinity logo unchanged. A short animated mark accompanies handoffs and draft preparation; reduced-motion mode uses a static indicator. Logo and transitions do not change action permissions.
