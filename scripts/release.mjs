@@ -51,5 +51,5 @@ if (dry) { console.log(`Dry run: ${setup} built and checked; nothing published.`
 
 run('git', ['tag', tag])
 run('git', ['push', 'origin', 'HEAD', tag])
-run('gh', ['release', 'create', tag, setup, `${setup}.blockmap`, join(root, 'dist', 'latest.yml'), '--repo', 'hollisorg/iv-signal', '--title', `IV Signal ${version}`, '--notes-file', existsSync(join(root, 'dist', `notes-${version}.md`)) ? join(root, 'dist', `notes-${version}.md`) : join(root, 'README.md')])
+run('gh', ['release', 'create', tag, setup, `${setup}.blockmap`, join(root, 'dist', 'latest.yml'), '--repo', 'hollisorg/iv-signal-releases', '--latest', '--title', `IV Signal ${version}`, '--notes-file', existsSync(join(root, 'dist', `notes-${version}.md`)) ? join(root, 'dist', `notes-${version}.md`) : join(root, 'README.md')])
 console.log(`Published ${tag}${sign ? ' (signed)' : ' (unsigned)'}.`)

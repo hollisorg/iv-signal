@@ -9,7 +9,7 @@ const TOPICS = [
   ['brands', 'Brands', 'Each brand has its own Brand Brain, posts, calendar and library.'],
   ['agent', 'Your agent', 'The chat runs on your own agent, shared across brands.'],
   ['connections', 'Other apps', 'Use IV Signal from Claude Code, Codex or Claude Desktop.'],
-  ['updates', 'Updates', 'IV Signal keeps itself up to date from its private releases.'],
+  ['updates', 'Updates', 'IV Signal keeps itself up to date, no setup needed.'],
   ['activity', 'Activity', 'Every change, and who made it.'],
   ['data', 'Your data', 'What IV Signal keeps, and where.'],
 ]
@@ -77,7 +77,7 @@ function Activity({ brand }) {
 function YourData() {
   return <div className="small">
     <p>IV Signal keeps everything on this PC: one database file (signal.db), the library's copies of your pictures and videos, your chats and your settings, in your user folder under <span className="mono">AppData\Roaming\IV Signal</span>.</p>
-    <p className="dim">The chat sends your messages, the open page and the brand details it reads to the agent you chose (Claude Code, Codex or Hermes), under that provider's terms. Posting is by hand, so nothing is sent to a social network by IV Signal itself.</p>
+    <p className="dim">The chat sends your messages, the open page and the brand details it reads to the agent you chose (Claude Code, Codex or Hermes), under that provider's terms. Posts go to a network only when you click: by hand with Copy &amp; open, or to a connected Facebook Page, which gets the words and the picture.</p>
   </div>
 }
 
