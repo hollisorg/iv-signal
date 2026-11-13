@@ -1,6 +1,7 @@
 import PageStage, { PageMetrics } from '../components/PageStage'
 import { useEffect, useState } from 'react'
 import { call, useData, askAgent, at, when, toLocalInput, fromLocalInput, CHANNELS, mediaUrl } from '../api'
+import PicturePanel from '../components/PicturePanel'
 
 const STATUS = { draft: 'Draft', approved: 'Approved', archived: 'Archived' }
 
@@ -110,7 +111,7 @@ function Editor({ post, brand, notify, onChanged, close, openChat }) {
       {post.idea && <p className="small dim editor-idea">Idea: {post.idea}</p>}
       {post.campaign_name && <p className="mono small dim">Campaign: {post.campaign_name}</p>}
       <div className="variants" data-guide="checks">
-        {post.variants.map((v) => <Variant key={v.id + v.updated_at} v={v} post={post} media={media || []} notify={notify} onChanged={onChanged} />)}
+        {post.variants.map((v) => <Variant key={v.id + v.updated_at} v={v} post={post} brand={brand} media={media || []} notify={notify} onChanged={onChanged} />)}
       </div>
       {missing.length > 0 && post.status !== 'archived' && (
         adding ? (
@@ -132,11 +133,12 @@ function Editor({ post, brand, notify, onChanged, close, openChat }) {
   )
 }
 
-function Variant({ v, post, media, notify, onChanged }) {
+function Variant({ v, post, brand, media, notify, onChanged }) {
   const [text, setText] = useState(v.text)
   const [alt, setAlt] = useState(v.alt_text || '')
   const [when_, setWhen] = useState(toLocalInput(v.planned_for))
   const [picking, setPicking] = useState(false)
+  const [making, setMaking] = useState(false)
   const posted = v.status === 'posted'
   const locked = posted || post.status === 'archived'
   const dirty = text !== v.text || alt !== (v.alt_text || '') || fromLocalInput(when_) !== (v.planned_for ? new Date(v.planned_for).toISOString() : null)
@@ -161,7 +163,9 @@ function Variant({ v, post, media, notify, onChanged }) {
       <div className="variant-media">
         {v.media.map((m) => <figure key={m.id}>{m.kind === 'image' ? <img src={mediaUrl(m)} alt={m.alt_text || ''} /> : <span className="video-tile">▶</span>}<figcaption className="small">{m.name}</figcaption>{!locked && <button className="link-btn" onClick={() => toggleMedia(m.id)}>Remove</button>}</figure>)}
         {!locked && <button className="btn btn-small" onClick={() => setPicking(!picking)}>{picking ? 'Done' : '＋ Picture or video'}</button>}
+        {!locked && <button className="btn btn-small" onClick={() => setMaking(!making)}>{making ? 'Hide' : 'Make one with Codex'}</button>}
       </div>
+      {making && <PicturePanel brand={brand} notify={notify} initial={`A picture for this ${v.channel_name} post: ${(post.idea || text).slice(0, 300)}`} post_id={post.id} channel={v.channel} onClose={() => setMaking(false)} />}
       {picking && (
         <div className="media-pick">
           {media.length ? media.map((m) => <button key={m.id} className={v.media_ids.includes(m.id) ? 'on' : ''} onClick={() => toggleMedia(m.id)} title={m.name}>{m.kind === 'image' ? <img src={mediaUrl(m)} alt="" /> : <span className="video-tile">▶</span>}</button>) : <p className="small dim">The library is empty. Add pictures and videos on the Library page.</p>}

@@ -149,6 +149,36 @@ export const MIGRATIONS = [
   );
   create index events_at on events(at);
   `,
+  // 2: how posted versions did, entered by the person or their agent (later read from the networks).
+  `
+  create table results (
+    id text primary key,
+    variant_id text not null references variants(id) on delete cascade,
+    measured_at text not null,
+    reach integer, views integer, likes integer, comments integer, shares integer, saves integer, clicks integer,
+    notes text,
+    source text not null default 'person',
+    created_at text not null
+  );
+  create index results_variant on results(variant_id, measured_at);
+  `,
+  // 3: versions handed to a network to publish (Facebook schedules them itself), and what came back.
+  `
+  create table deliveries (
+    id text primary key,
+    variant_id text not null references variants(id) on delete cascade,
+    provider text not null,
+    external_id text,
+    scheduled_for text,
+    status text not null check (status in ('scheduled','published','failed','cancelled')),
+    url text,
+    error text,
+    fingerprint text,
+    created_at text not null,
+    updated_at text not null
+  );
+  create index deliveries_variant on deliveries(variant_id);
+  `,
 ]
 
 export function openDb(file) {

@@ -19,6 +19,10 @@ import { PLACES, guidePlaces } from '../renderer/src/guides.js'
 import { importBrandImage, brandImage } from '../service/brand-assets.js'
 import { onboardingStatus, saveOnboarding, finishOnboarding } from '../service/onboarding.js'
 import { initUpdater, updateState, REPO } from './updater.js'
+import { pictureIntoLibrary, SHAPES } from '../service/pictures.js'
+import { ivStudioRenders } from '../service/ivstudio.js'
+import { approvalPackHtml } from '../service/approvalpack.js'
+import { verifyPageToken, publishToPage, checkPagePost, cancelPagePost } from '../service/meta.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const APP = 'IV Signal'
@@ -201,6 +205,70 @@ function savedUpdateKey() {
 const updateKeys = () => ({ savedKey: savedUpdateKey(), useGh: readSettings().updateUseGh === true })
 const updateView = () => ({ ...updateState(), hasKey: !!readSettings().updateKeyEnc, useGh: readSettings().updateUseGh === true, repo: `${REPO.owner}/${REPO.repo}` })
 
+// --- Pictures made with the person's Codex, one job at a time per brand, shown while they run ---
+const pictureJobs = new Map()
+const jobView = (j) => ({ id: j.id, brand_id: j.brand_id, description: j.description, shape: j.shape, status: j.status, error: j.error, media_id: j.media_id, startedAt: j.startedAt, post_id: j.post_id, channel: j.channel })
+function startPicture(args) {
+  const id = randomUUID()
+  const job = { id, ...args, status: 'running', error: null, media_id: null, startedAt: new Date().toISOString() }
+  pictureJobs.set(id, job)
+  send('data:changed', { tool: 'picture' })
+  pictureIntoLibrary(getDb(), { ...args, actor: 'person' })
+    .then((m) => { job.status = 'done'; job.media_id = m.id })
+    .catch((e) => { job.status = 'failed'; job.error = e.message })
+    .finally(() => send('data:changed', { tool: 'picture' }))
+  return jobView(job)
+}
+
+// --- A small JPEG of a library picture for the approval pack ---
+function thumbDataUrl(m) {
+  try {
+    const img = nativeImage.createFromPath(sg.mediaPath(m))
+    if (img.isEmpty()) return null
+    const { width, height } = img.getSize()
+    const scale = Math.min(1, 360 / Math.max(width, height))
+    return `data:image/jpeg;base64,${img.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'good' }).toJPEG(80).toString('base64')}`
+  } catch {
+    return null
+  }
+}
+
+// --- Facebook Pages: a Page token per brand, kept encrypted; approved posts are scheduled on Facebook itself ---
+function metaFor(brand_id) {
+  const m = (readSettings().meta || {})[brand_id]
+  if (!m?.tokenEnc || !safeStorage.isEncryptionAvailable()) return null
+  try {
+    return { ...m, token: safeStorage.decryptString(Buffer.from(m.tokenEnc, 'base64')) }
+  } catch {
+    return null
+  }
+}
+const metaView = (brand_id) => {
+  const m = (readSettings().meta || {})[brand_id]
+  return m ? { connected: true, page_id: m.page_id, page_name: m.page_name, link: m.link || null, connectedAt: m.connectedAt } : { connected: false }
+}
+async function checkDueDeliveries() {
+  for (const d of sg.dueDeliveries(getDb())) {
+    if (d.provider !== 'facebook') continue
+    const v = getDb().prepare('select v.*, p.brand_id from variants v join posts p on p.id = v.post_id where v.id = ?').get(d.variant_id)
+    const meta = v && metaFor(v.brand_id)
+    if (!meta) continue
+    try {
+      const r = await checkPagePost({ token: meta.token, external_id: d.external_id })
+      if (r.published) {
+        sg.updateDelivery(getDb(), d.id, { status: 'published', url: r.url, actor: 'facebook' })
+        if (v.status !== 'posted') sg.markPosted(getDb(), v.id, { url: r.url || '', actor: 'facebook' })
+        send('data:changed', { tool: 'delivery' })
+      }
+    } catch (e) {
+      if (e.status === 404) {
+        sg.updateDelivery(getDb(), d.id, { status: 'failed', error: 'Facebook no longer has this post (it may have been deleted there).', actor: 'facebook' })
+        send('data:changed', { tool: 'delivery' })
+      }
+    }
+  }
+}
+
 const withArt = (b) => ({ ...b, art: { logo: brandImage(sg.defaultDataDir(), b.profile.logo_id), cover: brandImage(sg.defaultDataDir(), b.profile.cover_id) } })
 
 const METHODS = {
@@ -263,6 +331,114 @@ const METHODS = {
   updateClearKey: () => { writeSettings({ updateKeyEnc: null }); return updateView() },
   updateUseGh: async ({ on }) => { writeSettings({ updateUseGh: !!on }); if (on) await updater.check(); return updateView() },
 
+  // pictures with Codex
+  pictureShapes: () => SHAPES,
+  makePicture: ({ brand_id, description, shape, reference_media_ids = [], post_id = null, channel = null }) => {
+    sg.requireBrand(getDb(), brand_id)
+    if (!String(description || '').trim()) throw new Error('Describe the picture first.')
+    if ([...pictureJobs.values()].some((j) => j.brand_id === brand_id && j.status === 'running')) throw new Error('A picture is already being made for this brand. Wait for it to finish.')
+    return startPicture({ brand_id, description: String(description).slice(0, 1500), shape: SHAPES[shape] ? shape : 'square', reference_media_ids, post_id, channel })
+  },
+  pictureJobs: ({ brand_id }) => [...pictureJobs.values()].filter((j) => j.brand_id === brand_id).map(jobView).reverse(),
+  clearPictureJob: ({ id }) => { const j = pictureJobs.get(id); if (j && j.status !== 'running') pictureJobs.delete(id); return true },
+
+  // IV Studio
+  ivStudioRenders: (args) => ivStudioRenders(args),
+  importFromIvStudio: async ({ brand_id, paths = [] }) => {
+    const known = new Set((await ivStudioRenders({ previews: true, limit: 500 })).items.map((i) => i.path))
+    const out = []
+    for (const path of paths.slice(0, 20)) {
+      if (!known.has(path)) throw new Error('That file is not one of IV Studio’s renders.')
+      out.push(METHODS.importMediaPath({ brand_id, path }))
+    }
+    return out
+  },
+
+  // results
+  postedWithResults: ({ brand_id }) => sg.postedWithResults(getDb(), { brand_id }),
+  recordResults: ({ variant_id, ...values }) => changed('results', sg.recordResults(getDb(), variant_id, values, ME)),
+
+  // client approval pack
+  approvalPack: async ({ brand_id, post_ids = [], note = '' }) => {
+    const brand = sg.requireBrand(getDb(), brand_id)
+    const posts = post_ids.map((id) => sg.getPost(getDb(), id)).filter((p) => p && p.brand_id === brand_id && p.status !== 'archived')
+    if (!posts.length) throw new Error('Choose at least one post.')
+    const html = approvalPackHtml({ brand, posts, note: String(note).slice(0, 2000), from: readSettings().userName || '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, thumb: thumbDataUrl })
+    const dir = join(app.getPath('documents'), 'IV Signal', 'Approval packs')
+    mkdirSync(dir, { recursive: true })
+    const safe = brand.name.replace(/[^\w -]+/g, '').trim() || 'brand'
+    const pick = await dialog.showSaveDialog(win, { title: 'Save the approval pack', defaultPath: join(dir, `${safe} - for approval ${new Date().toISOString().slice(0, 10)}.html`), filters: [{ name: 'Web page', extensions: ['html'] }] })
+    if (pick.canceled || !pick.filePath) return null
+    writeFileSync(pick.filePath, html, 'utf8')
+    sg.logEvent(getDb(), 'approval_pack', { actor: 'person', brand_id, summary: `Saved an approval pack of ${posts.length} post${posts.length === 1 ? '' : 's'}` })
+    shell.showItemInFolder(pick.filePath)
+    return { written: pick.filePath, posts: posts.length }
+  },
+
+  // Facebook Page publishing
+  metaStatus: ({ brand_id }) => metaView(brand_id),
+  metaConnect: async ({ brand_id, token }) => {
+    sg.requireBrand(getDb(), brand_id)
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('This PC can’t encrypt the token, so IV Signal won’t store it.')
+    const page = await verifyPageToken(token)
+    const meta = { ...(readSettings().meta || {}) }
+    meta[brand_id] = { ...page, tokenEnc: safeStorage.encryptString(String(token).trim()).toString('base64'), connectedAt: new Date().toISOString() }
+    writeSettings({ meta })
+    sg.setChannelStatus(getDb(), { brand_id, channel: 'facebook', status: 'connected', handle: page.page_name, url: page.link, ...ME })
+    send('data:changed', { tool: 'channel' })
+    return metaView(brand_id)
+  },
+  metaDisconnect: ({ brand_id }) => {
+    const meta = { ...(readSettings().meta || {}) }
+    delete meta[brand_id]
+    writeSettings({ meta })
+    sg.setChannelStatus(getDb(), { brand_id, channel: 'facebook', status: 'manual', ...ME })
+    send('data:changed', { tool: 'channel' })
+    return metaView(brand_id)
+  },
+  // The person's click: hand one approved Facebook version to Facebook (scheduled at its planned time, or now).
+  publishFacebook: async ({ variant_id, now: postNow = false }) => {
+    const v = getDb().prepare('select * from variants where id = ?').get(variant_id)
+    if (!v || v.channel !== 'facebook') throw new Error('Only Facebook versions go to a Facebook Page.')
+    const post = sg.getPost(getDb(), v.post_id)
+    const meta = metaFor(post.brand_id)
+    if (!meta) throw new Error('Connect a Facebook Page on the Networks page first.')
+    if (!post.approved || v.status !== 'approved') throw new Error('Approve the post first.')
+    if (sg.activeDelivery(getDb(), v.id)) throw new Error('This version is already with Facebook.')
+    const full = post.variants.find((x) => x.id === v.id)
+    if (full.media.some((m) => m.kind === 'video')) throw new Error('Videos to Facebook come later. Post this one by hand for now.')
+    const image = full.media.find((m) => m.kind === 'image')
+    const when = postNow ? null : v.planned_for
+    try {
+      const r = await publishToPage({ token: meta.token, page_id: meta.page_id, text: v.text, imagePath: image ? sg.mediaPath(image) : null, when })
+      const d = sg.recordDelivery(getDb(), { variant_id: v.id, provider: 'facebook', external_id: r.external_id, scheduled_for: r.scheduled_for, status: r.scheduled_for ? 'scheduled' : 'published', fingerprint: post.approval?.fingerprint, ...ME })
+      if (!r.scheduled_for) {
+        let url = null
+        try { url = (await checkPagePost({ token: meta.token, external_id: r.external_id })).url } catch { /* the link can come later */ }
+        if (url) sg.updateDelivery(getDb(), d.id, { url })
+        sg.markPosted(getDb(), v.id, { url: url || '', ...ME })
+      }
+      send('data:changed', { tool: 'delivery' })
+      return sg.lastDelivery(getDb(), v.id)
+    } catch (e) {
+      sg.recordDelivery(getDb(), { variant_id: v.id, provider: 'facebook', status: 'failed', error: e.message, ...ME })
+      send('data:changed', { tool: 'delivery' })
+      throw e
+    }
+  },
+  cancelFacebook: async ({ variant_id }) => {
+    const d = sg.activeDelivery(getDb(), variant_id)
+    if (!d || d.status !== 'scheduled') throw new Error('Nothing is scheduled on Facebook for this version.')
+    const v = getDb().prepare('select v.*, p.brand_id from variants v join posts p on p.id = v.post_id where v.id = ?').get(variant_id)
+    const meta = metaFor(v.brand_id)
+    if (!meta) throw new Error('Connect the Facebook Page again to cancel it there.')
+    await cancelPagePost({ token: meta.token, external_id: d.external_id })
+    sg.updateDelivery(getDb(), d.id, { status: 'cancelled', ...ME })
+    send('data:changed', { tool: 'delivery' })
+    return true
+  },
+  checkDeliveries: async () => { await checkDueDeliveries(); return true },
+
   // brands
   workspaceState: () => ({ brands: sg.listBrands(getDb()).map(withArt), brandId: readSettings().selectedBrandId || null }),
   workspaceSelect: ({ brandId }) => {
@@ -306,6 +482,8 @@ const METHODS = {
   skipVariant: ({ variant_id }) => changed('posted', sg.skipVariant(getDb(), variant_id, ME)),
   calendar: (args) => sg.calendar(getDb(), args),
   postingQueue: ({ brand_id }) => sg.postingQueue(getDb(), { brand_id }),
+  facebookToSchedule: ({ brand_id }) => (metaView(brand_id).connected ? sg.facebookToSchedule(getDb(), { brand_id }) : []),
+  facebookScheduled: ({ brand_id }) => sg.facebookScheduled(getDb(), { brand_id }),
   // Copy an approved version's words and open the network (the brand's saved account, else the network's compose page).
   copyAndOpen: ({ variant_id }) => {
     const v = getDb().prepare('select * from variants where id = ?').get(variant_id)
@@ -364,7 +542,7 @@ const METHODS = {
     clipboard.writeText(String(text || ''))
     return { copied: true }
   },
-  appSettings: () => { const { updateKeyEnc, ...rest } = readSettings(); return rest },
+  appSettings: () => { const { updateKeyEnc, meta, ...rest } = readSettings(); return rest },
   saveAppSettings: (patch) => {
     const clean = {}
     if (['claude', 'codex', 'hermes', ''].includes(patch.chatEngine)) clean.chatEngine = patch.chatEngine
@@ -600,6 +778,8 @@ else {
       /* The chat still works without visual guidance. */
     }
     createWindow()
+    setInterval(() => checkDueDeliveries().catch(() => {}), 3 * 60 * 1000)
+    setTimeout(() => checkDueDeliveries().catch(() => {}), 20000)
     updater = initUpdater((state) => send('update:changed', { ...state, hasKey: !!readSettings().updateKeyEnc, useGh: readSettings().updateUseGh === true, repo: `${REPO.owner}/${REPO.repo}` }), updateKeys)
   })
   let cleanedUp = false

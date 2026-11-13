@@ -1,10 +1,13 @@
 import PageStage, { PageMetrics } from '../components/PageStage'
 import { call, useData, askAgent, at, mediaUrl } from '../api'
 import emptyArt from '../assets/signal-approve.webp'
+import { useState } from 'react'
+import ApprovalPackDialog from '../components/ApprovalPackDialog'
 
 export default function Approve({ brand, notify, go, openChat }) {
   const [drafts, reload] = useData('listPosts', { brand_id: brand.id, status: 'draft' }, [brand.id])
   const [approved] = useData('listPosts', { brand_id: brand.id, status: 'approved' }, [brand.id])
+  const [pack, setPack] = useState(false)
   const clean = (drafts || []).filter((p) => p.variants.length && !p.blocking)
   const approve = async (ids) => {
     try {
@@ -25,9 +28,11 @@ export default function Approve({ brand, notify, go, openChat }) {
         <p className="small dim">Read every version. Approve exactly what goes out; any later edit needs approving again.</p>
         <div className="head-actions">
           {(drafts || []).some((p) => p.blocking) && <button className="btn" onClick={() => (openChat(), askAgent({ text: 'Fix the drafts that can’t be approved yet, and tell me what you changed.' }))}>Ask the chat to fix the issues</button>}
+          <button className="btn" data-guide="approval-pack" onClick={() => setPack(true)}>Share for approval</button>
           {clean.length > 1 && <button className="btn btn-primary" onClick={() => approve(clean.map((p) => p.id))}>Approve {clean.length} ready posts</button>}
         </div>
       </div>
+      {pack && <ApprovalPackDialog brand={brand} notify={notify} onClose={() => setPack(false)} />}
       {!drafts ? <p className="dim">Loading…</p> : !drafts.length ? (
         <div className="empty art">
           <img src={emptyArt} alt="" width="200" height="200" />

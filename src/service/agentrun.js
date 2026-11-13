@@ -85,6 +85,7 @@ export function chatAsk(name, args = {}) {
   if (name === 'signal_skip_variant') return 'This marks one network version as skipped, so it will not be posted.'
   if (name === 'signal_archive_post') return args.restore ? 'This brings an archived post back as a draft.' : 'This archives a post. You can restore it later.'
   if (name === 'signal_remove_brain_note') return 'This removes a note from your Brand Brain.'
+  if (name === 'signal_add_from_iv_studio') return `This copies ${Array.isArray(args.paths) ? args.paths.length : 'some'} IV Studio render${Array.isArray(args.paths) && args.paths.length === 1 ? '' : 's'} into the brand’s library.`
   if (name === 'signal_add_media') return `This copies ${args.path || 'a file'} from this PC into the brand's library.`
   if (name === 'signal_update_brand' && args.profile && Object.hasOwn(args.profile, 'prohibited')) return 'This changes the list of things your brand never claims.'
   return null
@@ -120,6 +121,11 @@ const LABELS = {
   signal_list_channels: 'Looked at your networks',
   signal_save_channel: 'Saved a network account',
   signal_activity: 'Read the activity log',
+  signal_make_picture: 'Made a picture with Codex',
+  signal_iv_studio_renders: 'Looked at IV Studio renders',
+  signal_add_from_iv_studio: 'Added IV Studio renders',
+  signal_results: 'Read the results',
+  signal_record_results: 'Recorded results',
   signal_list_places: 'Found a place in the app',
   signal_show_in_app: 'Showed you in the app',
   signal_inspect_app: 'Looked at the app',

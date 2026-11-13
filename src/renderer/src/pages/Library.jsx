@@ -2,6 +2,8 @@ import PageStage, { PageMetrics } from '../components/PageStage'
 import { useState } from 'react'
 import { call, useData, askAgent, mediaUrl } from '../api'
 import emptyArt from '../assets/signal-library.webp'
+import PicturePanel from '../components/PicturePanel'
+import IvStudioDialog from '../components/IvStudioDialog'
 
 const mb = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`)
 
@@ -9,6 +11,8 @@ export default function Library({ brand, notify, openChat }) {
   const [kind, setKind] = useState('')
   const [media, reload] = useData('listMedia', { brand_id: brand.id, kind: kind || undefined }, [brand.id, kind])
   const [over, setOver] = useState(false)
+  const [making, setMaking] = useState(false)
+  const [studio, setStudio] = useState(false)
   const add = async () => {
     try {
       const added = await call('importMedia', { brand_id: brand.id })
@@ -43,9 +47,13 @@ export default function Library({ brand, notify, openChat }) {
         <div className="segmented" role="tablist">{[['', 'All'], ['image', 'Pictures'], ['video', 'Videos']].map(([id, label]) => <button key={id} role="tab" aria-selected={kind === id} className={kind === id ? 'on' : ''} onClick={() => setKind(id)}>{label}</button>)}</div>
         <div className="head-actions">
           {missingAlt > 0 && <button className="btn" onClick={() => (openChat(), askAgent({ text: 'Suggest picture descriptions (alt text) for the pictures in my library that don’t have one. Show me before saving.' }))}>Describe pictures with the chat</button>}
+          <button className="btn" onClick={() => setStudio(true)}>From IV Studio</button>
+          <button className="btn" onClick={() => setMaking(!making)}>{making ? 'Hide' : 'Make a picture'}</button>
           <button className="btn btn-primary" onClick={add}>Add pictures or videos</button>
         </div>
       </div>
+      {making && <section className="panel" data-guide="make-picture"><div className="panel-head"><h2>Make a picture</h2></div><PicturePanel brand={brand} notify={notify} onClose={() => setMaking(false)} /></section>}
+      {studio && <IvStudioDialog brand={brand} notify={notify} onClose={() => setStudio(false)} onAdded={() => { setStudio(false); reload() }} />}
       <p className="small dim">Drop files anywhere on this page. IV Signal keeps its own copy, so a post shows exactly what you approved.</p>
       {!media ? <p className="dim">Loading…</p> : !media.length ? (
         <div className="empty art"><img src={emptyArt} alt="" width="200" height="200" /><div><p className="empty-title">Nothing here yet.</p><p className="dim">Add the photos and videos your posts will use. Instagram and Pinterest need a picture; TikTok and YouTube need a video.</p><button className="btn" onClick={add}>Add files</button></div></div>

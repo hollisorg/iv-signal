@@ -1,5 +1,6 @@
 import PageStage, { PageMetrics } from '../components/PageStage'
-import PostingList from '../components/PostingList'
+import PostingList, { FacebookScheduled } from '../components/PostingList'
+import ResultsPanel from '../components/ResultsPanel'
 import { useState } from 'react'
 import { useData, askAgent } from '../api'
 
@@ -18,6 +19,7 @@ export default function Calendar({ brand, go, notify, openChat }) {
   const last = new Date(first.getTime() + WEEKS * 7 * DAY)
   const [cal] = useData('calendar', { brand_id: brand.id, from: first.toISOString(), to: last.toISOString() }, [brand.id, offset])
   const [queue] = useData('postingQueue', { brand_id: brand.id }, [brand.id])
+  const [fbLater] = useData('facebookToSchedule', { brand_id: brand.id }, [brand.id])
   const days = Array.from({ length: WEEKS * 7 }, (_, i) => new Date(first.getFullYear(), first.getMonth(), first.getDate() + i))
   const items = cal?.items || []
   const today = new Date()
@@ -28,10 +30,18 @@ export default function Calendar({ brand, go, notify, openChat }) {
 
       {queue?.length > 0 && (
         <section className="panel">
-          <div className="panel-head"><h2>Ready to post</h2><span className="small dim">Publishing isn't connected yet: copy, open, post, then mark it posted.</span></div>
-          <PostingList items={queue} notify={notify} />
+          <div className="panel-head"><h2>Ready to post</h2><span className="small dim">Copy, open, post, then mark it posted. Facebook posts can go straight to a connected Page.</span></div>
+          <PostingList items={queue} notify={notify} brand={brand} />
         </section>
       )}
+
+      {fbLater?.length > 0 && (
+        <section className="panel">
+          <div className="panel-head"><h2>Schedule on Facebook</h2><span className="small dim">Approved Facebook posts for later. Scheduled on your Page, they go out on time even with IV Signal closed.</span></div>
+          <PostingList items={fbLater} notify={notify} brand={brand} />
+        </section>
+      )}
+      <FacebookScheduled brand={brand} notify={notify} />
 
       <div className="page-toolbar">
         <div className="head-actions">
@@ -51,16 +61,17 @@ export default function Calendar({ brand, go, notify, openChat }) {
             <div key={d.toISOString()} role="gridcell" className={`cal-day ${sameDay(d, today) ? 'is-today' : ''} ${d < new Date(today.getFullYear(), today.getMonth(), today.getDate()) ? 'is-past' : ''}`}>
               <span className="cal-date mono">{d.getDate() === 1 || d === days[0] ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : d.getDate()}</span>
               {mine.map((i) => (
-                <button key={i.id} className={`cal-item st-${i.status}`} onClick={() => go('create', { post: { id: i.post_id, title: i.title } })} title={`${i.channel_name}: ${i.title} (${i.status})`}>
+                <button key={i.id} className={`cal-item st-${i.status}`} onClick={() => go('create', { post: { id: i.post_id, title: i.title } })} title={`${i.channel_name}: ${i.title} (${i.delivery === 'scheduled' ? 'scheduled on Facebook' : i.status})`}>
                   <span className={`chan ${i.channel}`}>{i.channel_name}</span>
                   <span className="cal-time mono">{new Date(i.planned_for).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
-                  <span className="cal-title">{i.status === 'posted' ? '✓ ' : ''}{i.title}</span>
+                  <span className="cal-title">{i.status === 'posted' ? '✓ ' : i.delivery === 'scheduled' ? '⏱ ' : ''}{i.title}</span>
                 </button>
               ))}
             </div>
           )
         })}
       </div>
+      <ResultsPanel brand={brand} notify={notify} openChat={openChat} />
       <p className="small dim cal-key"><span className="cal-item st-draft">Draft</span> <span className="cal-item st-approved">Approved</span> <span className="cal-item st-posted">Posted</span> <span className="cal-item st-skipped">Skipped</span></p>
     </div>
   )

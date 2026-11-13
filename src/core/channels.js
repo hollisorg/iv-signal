@@ -36,3 +36,15 @@ export function removeChannel(db, { brand_id, channel, actor } = {}) {
   logEvent(db, 'channel_removed', { actor, brand_id, summary: `Removed ${brand.name}'s ${CHANNELS[channel]?.name || channel} account` })
   return listChannels(db, { brand_id })
 }
+
+// Mark whether a network is connected for direct publishing (the token itself lives in the app's encrypted settings).
+export function setChannelStatus(db, { brand_id, channel, status, handle, url, actor } = {}) {
+  requireBrand(db, brand_id)
+  if (!['manual', 'connected', 'needs_reconnect'].includes(status)) throw new Error('Unknown channel status.')
+  const at = now()
+  db.prepare(`insert into channels (id, brand_id, channel, handle, url, status, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?)
+    on conflict(brand_id, channel) do update set status = excluded.status, handle = coalesce(excluded.handle, channels.handle), url = coalesce(excluded.url, channels.url), updated_at = excluded.updated_at`)
+    .run(newId(), brand_id, channel, handle || null, url || null, status, at, at)
+  logEvent(db, 'channel_status', { actor, brand_id, summary: `${CHANNELS[channel].name} is ${status === 'connected' ? 'connected for direct posting' : status === 'manual' ? 'back to posting by hand' : 'needing to reconnect'}` })
+  return listChannels(db, { brand_id })
+}

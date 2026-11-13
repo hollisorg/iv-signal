@@ -66,7 +66,7 @@ export default function Today({ brand, overview, go, openChat, notify }) {
           <h2>Ready to post</h2>
           <span className="small dim">Approved and due within a day. Publishing isn't connected yet, so these go out by hand.</span>
         </div>
-        {queue?.length ? <PostingList items={queue} notify={notify} /> : (
+        {queue?.length ? <PostingList items={queue} notify={notify} brand={brand} /> : (
           <div className="empty">
             <p>Nothing waiting. Approved posts show up here when their time comes.</p>
             {c.drafts > 0 && <button className="btn" onClick={() => go('approve')}>Review {c.drafts} draft{c.drafts === 1 ? '' : 's'}</button>}

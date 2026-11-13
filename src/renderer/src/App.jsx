@@ -48,6 +48,7 @@ export default function App() {
   const brand = brands.find((b) => b.id === chosen) || brands[0] || null
   const [overview] = useData('overview', { brand_id: brand?.id || '__none__' }, [brand?.id])
   const [chat] = useData('chatStatus')
+  const [fbStatus] = useData('metaStatus', { brand_id: brand?.id }, [brand?.id])
 
   const notify = (text, tone = 'error') => {
     setToast({ text, tone })
@@ -96,9 +97,9 @@ export default function App() {
             <span className={`dot ${agent ? 'ok' : ''}`} />
             <span className="mono">{agent ? AGENT[agent] : 'No agent'}</span>
           </span>
-          <button className="badge as-btn" onClick={() => go('channels')} title="Publishing isn't connected yet: you post approved versions yourself">
-            <span className="dot idle" />
-            <span className="mono">Posting by hand</span>
+          <button className="badge as-btn" onClick={() => go('channels')} title={fbStatus?.connected ? `Facebook posts go straight to ${fbStatus.page_name}; other networks are posted by hand` : 'Publishing isn’t connected yet: you post approved versions yourself'}>
+            <span className={`dot ${fbStatus?.connected ? 'ok' : 'idle'}`} />
+            <span className="mono">{fbStatus?.connected ? 'Facebook direct' : 'Posting by hand'}</span>
           </button>
           {(!chatOpen || chatWindow.detached) && (
             <button className="badge as-btn" onClick={shared.openChat}>

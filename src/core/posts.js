@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { CHANNELS, now, newId, logEvent, clip, tx } from './db.js'
 import { requireBrand } from './brands.js'
 import { getCampaign } from './campaigns.js'
+import { activeDelivery, lastDelivery } from './deliveries.js'
 
 const hydrateVariant = (row) => {
   if (!row) return null
@@ -69,7 +70,7 @@ export function getPost(db, id) {
   const brand = requireBrand(db, post.brand_id)
   const variants = db.prepare('select * from variants where post_id = ? order by channel').all(id).map(hydrateVariant).map((v) => {
     const media = v.media_ids.map((m) => db.prepare('select * from media where id = ?').get(m)).filter(Boolean)
-    return { ...v, channel_name: CHANNELS[v.channel].name, limit: CHANNELS[v.channel].limit, media, issues: variantIssues(v, brand, media) }
+    return { ...v, channel_name: CHANNELS[v.channel].name, limit: CHANNELS[v.channel].limit, media, issues: variantIssues(v, brand, media), delivery: lastDelivery(db, v.id) }
   })
   const approval = currentApproval(db, post)
   const campaign = post.campaign_id ? getCampaign(db, post.campaign_id) : null
@@ -107,6 +108,7 @@ function writeVariant(db, post, { channel, text, media_ids, alt_text, planned_fo
   const key = channelOf(channel)
   const existing = hydrateVariant(db.prepare('select * from variants where post_id = ? and channel = ?').get(post.id, key))
   if (existing?.status === 'posted') throw new Error(`The ${CHANNELS[key].name} version is already posted; it can't change.`)
+  if (existing && activeDelivery(db, existing.id)) throw new Error(`The ${CHANNELS[key].name} version is scheduled on ${CHANNELS[key].name}. Cancel that first, then edit it.`)
   const next = {
     text: text === undefined ? existing?.text ?? '' : String(text ?? '').slice(0, 70000),
     media_ids: media_ids === undefined ? existing?.media_ids ?? [] : mediaFor(db, post.brand_id, media_ids).map((m) => m.id),
@@ -170,6 +172,7 @@ export function removeVariant(db, post_id, channel, { actor } = {}) {
   const v = post.variants.find((x) => x.channel === key)
   if (!v) return post
   if (v.status === 'posted') throw new Error('A posted version stays on record.')
+  if (activeDelivery(db, v.id)) throw new Error(`It's scheduled on ${CHANNELS[key].name}. Cancel that first.`)
   return tx(db, () => {
     db.prepare('delete from variants where id = ?').run(v.id)
     touch(db, post_id, { actor, summary: `Removed the ${CHANNELS[key].name} version of "${post.title}"` })
@@ -217,6 +220,7 @@ export function approvePosts(db, ids = [], { actor } = {}) {
 
 export function archivePost(db, id, { restore = false, actor } = {}) {
   const post = requirePost(db, id)
+  if (!restore && post.variants.some((v) => activeDelivery(db, v.id)?.status === 'scheduled')) throw new Error('A version is scheduled on a network. Cancel that first.')
   db.prepare('update posts set status = ?, updated_at = ? where id = ?').run(restore ? 'draft' : 'archived', now(), id)
   if (restore) db.prepare('update posts set revision = revision + 1 where id = ?').run(id)
   logEvent(db, restore ? 'post_restored' : 'post_archived', { actor, brand_id: post.brand_id, summary: `${restore ? 'Restored' : 'Archived'} "${post.title}"`, data: { post_id: id } })
@@ -256,11 +260,34 @@ export function calendar(db, { brand_id, from, to } = {}) {
   requireBrand(db, brand_id)
   const start = isoOrNull(from) || new Date(Date.now() - 7 * 864e5).toISOString()
   const end = isoOrNull(to) || new Date(Date.parse(start) + 42 * 864e5).toISOString()
-  const rows = db.prepare(`select v.id, v.post_id, v.channel, v.text, v.planned_for, v.status, v.posted_url, p.title, p.status post_status, p.revision
+  const rows = db.prepare(`select v.id, v.post_id, v.channel, v.text, v.planned_for, v.status, v.posted_url, p.title, p.status post_status, p.revision,
+        (select d.status from deliveries d where d.variant_id = v.id order by d.created_at desc limit 1) delivery
       from variants v join posts p on p.id = v.post_id
       where p.brand_id = ? and p.status != 'archived' and v.planned_for is not null and v.planned_for >= ? and v.planned_for < ?
       order by v.planned_for`).all(brand_id, start, end)
   return { from: start, to: end, items: rows.map((r) => ({ ...r, channel_name: CHANNELS[r.channel].name, excerpt: r.text.slice(0, 140) })) }
+}
+
+// Approved Facebook versions planned more than a day ahead that aren't with Facebook yet, so they can be scheduled there now.
+export function facebookToSchedule(db, { brand_id } = {}) {
+  requireBrand(db, brand_id)
+  const soon = new Date(Date.now() + 24 * 36e5).toISOString()
+  return db.prepare(`select v.id, v.post_id from variants v join posts p on p.id = v.post_id
+      where p.brand_id = ? and p.status = 'approved' and v.status = 'approved' and v.channel = 'facebook' and v.planned_for > ?
+        and not exists (select 1 from deliveries d where d.variant_id = v.id and d.status in ('scheduled','published'))
+      order by v.planned_for`).all(brand_id, soon)
+    .map((r) => {
+      const post = getPost(db, r.post_id)
+      return { ...post.variants.find((x) => x.id === r.id), post_title: post.title, post_id: post.id }
+    })
+}
+
+// Facebook versions IV Signal has handed to Facebook that are still waiting to go out there.
+export function facebookScheduled(db, { brand_id } = {}) {
+  requireBrand(db, brand_id)
+  return db.prepare(`select d.id delivery_id, d.status, d.scheduled_for, d.created_at, v.id variant_id, v.text, p.id post_id, p.title
+      from deliveries d join variants v on v.id = d.variant_id join posts p on p.id = v.post_id
+      where p.brand_id = ? and d.provider = 'facebook' and d.status = 'scheduled' order by d.scheduled_for`).all(brand_id)
 }
 
 // Approved versions whose time has come (or has no time), waiting for the person to post them.
@@ -269,6 +296,7 @@ export function postingQueue(db, { brand_id } = {}) {
   const soon = new Date(Date.now() + 24 * 36e5).toISOString()
   return db.prepare(`select v.id from variants v join posts p on p.id = v.post_id
       where p.brand_id = ? and p.status = 'approved' and v.status = 'approved' and (v.planned_for is null or v.planned_for <= ?)
+        and not exists (select 1 from deliveries d where d.variant_id = v.id and d.status in ('scheduled','published'))
       order by coalesce(v.planned_for, p.updated_at)`).all(brand_id, soon)
     .map((r) => {
       const v = hydrateVariant(db.prepare('select * from variants where id = ?').get(r.id))
