@@ -24,13 +24,11 @@ const SAY = {
   current: 'You have the newest version.',
   downloading: 'Downloading',
   ready: 'Ready to install',
-  'needs-key': 'Needs a key to check for updates.',
   error: 'Couldn’t check for updates.',
 }
 
 export default function UpdateSettings({ notify }) {
   const [u, setU] = useUpdate()
-  const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
   const run = (fn, ok) => async () => {
     if (busy) return
@@ -51,7 +49,7 @@ export default function UpdateSettings({ notify }) {
         <span>This copy</span>
         <div>
           <strong>IV Signal {u.version}</strong>
-          <small>{SAY[u.status] || u.status}{u.status === 'downloading' && u.available ? ` ${u.available} (${Math.round(u.percent || 0)}%)` : ''}{u.status === 'ready' ? ` ${u.available}. It installs when you restart or quit.` : ''}{u.checkedAt ? ` Last checked ${when(u.checkedAt)}.` : ''}{u.keySource ? ` Using the ${u.keySource}.` : ''}</small>
+          <small>{SAY[u.status] || u.status}{u.status === 'downloading' && u.available ? ` ${u.available} (${Math.round(u.percent || 0)}%)` : ''}{u.status === 'ready' ? ` ${u.available}. It installs when you restart or quit.` : ''}{u.checkedAt ? ` Last checked ${when(u.checkedAt)}.` : ''}</small>
           {u.error && <small className="bad">{u.error}</small>}
           <div className="form-actions">
             {u.status === 'ready' ? <button className="btn btn-primary" onClick={() => call('updateInstall')}>Restart to update</button> : <button className="btn" disabled={busy || u.status === 'dev' || u.status === 'checking' || u.status === 'downloading'} onClick={run(() => call('updateCheck'))}>Check for updates</button>}
@@ -59,18 +57,9 @@ export default function UpdateSettings({ notify }) {
         </div>
       </div>
       <div className="iv-set-field">
-        <span>Update key</span>
+        <span>How it works</span>
         <div>
-          <small>IV Signal’s releases live in the private repo {u.repo}, so each PC needs a read-only GitHub key to download them. Make a fine-grained key with access to that one repository and Contents set to Read-only, then paste it here. It’s stored encrypted on this PC.</small>
-          {u.hasKey ? (
-            <div className="form-actions"><span className="chip st-interested">Key saved</span><button className="btn btn-quiet btn-small" disabled={busy} onClick={run(() => call('updateClearKey'), 'Key removed.')}>Remove key</button></div>
-          ) : (
-            <form className="inline-form" onSubmit={(e) => { e.preventDefault(); run(async () => { const r = await call('updateSaveKey', { key }); setKey(''); return r }, 'Key saved. IV Signal checked for updates.')() }}>
-              <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="github_pat_…" autoComplete="off" aria-label="GitHub key" data-private />
-              <button className="btn" disabled={busy || !key.trim()}>Save key</button>
-            </form>
-          )}
-          <label className="update-gh"><input type="checkbox" checked={u.useGh} disabled={busy} onChange={(e) => run(() => call('updateUseGh', { on: e.target.checked }))()} /><span>Or use my GitHub CLI sign-in (gh) when there’s no key. IV Signal reads it at each check and doesn’t store it.</span></label>
+          <small>IV Signal checks for a new version when it opens and every six hours, downloads it in the background, and installs it when you restart or quit. Nothing to set up.</small>
         </div>
       </div>
     </div>

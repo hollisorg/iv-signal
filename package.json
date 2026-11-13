@@ -1,7 +1,7 @@
 {
   "name": "iv-signal",
   "productName": "IV Signal",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Desktop marketing workstation: a Brand Brain for each brand, posts written once for every network, approval, a calendar and a media library, driven by your own Claude Code, Codex or Hermes.",
   "author": "The Hollis Organization",
   "license": "UNLICENSED",
@@ -69,8 +69,7 @@
       {
         "provider": "github",
         "owner": "hollisorg",
-        "repo": "iv-signal",
-        "private": true,
+        "repo": "iv-signal-releases",
         "releaseType": "release"
       }
     ],

@@ -65,23 +65,25 @@ node scripts/release.mjs --unsigned [--dry]    # tests, build, installer, packag
 
 ## Releases and updates
 
-- Code and releases are **private** (Matt's choice, 2026-11-12): github.com/hollisorg/iv-signal. No public download.
-- The app updates itself with electron-updater's private GitHub provider (`src/main/updater.js`): on launch and every six
-  hours it downloads in the background; "Restart to update" (Settings → Updates, or the sidebar button) or quitting
-  installs. Each PC needs a read key: a fine-grained token with Contents read-only on that repo, pasted in Settings →
-  Updates (checked against GitHub, then stored with safeStorage as `updateKeyEnc`), or the GitHub CLI sign-in
-  (`updateUseGh`, read with `gh auth token` at each check, never stored).
-- To release: bump `version` in package.json, `npm.cmd test`, `npm.cmd run dist`, `node scripts/packaged-check.mjs`, commit,
-  tag `v<version>`, push both, then
-  `gh release create v<version> dist/IV-Signal-Setup-<version>.exe dist/IV-Signal-Setup-<version>.exe.blockmap dist/latest.yml --repo hollisorg/iv-signal`.
+- **Code is private** (github.com/hollisorg/iv-signal). **Releases are public** in the releases-only repo
+  github.com/hollisorg/iv-signal-releases (Matt, 2026-11-13: "it should update on its own without a github key"). That repo
+  holds only a README and the release files (installer, blockmap, `latest.yml`); never push source there. The installer
+  itself is public, and its app.asar is readable like any Electron app.
+- The app updates itself with electron-updater's GitHub provider on that public repo (`src/main/updater.js`), no key or
+  sign-in: on launch and every six hours it downloads in the background; "Restart to update" (Settings → Updates, or the
+  sidebar button) or quitting installs. 0.1.1 to 0.1.7 read the private repo and needed a key; a copy on those versions
+  needs one manual install of 0.1.8 or later. **Every release from 0.1.8 on must go to hollisorg/iv-signal-releases** (scripts/release.mjs does it); a release only on the private repo never reaches anyone.
+- To release: bump `version` in package.json, write `dist/notes-<version>.md`, commit, then `node scripts/release.mjs --unsigned`
+  (tests, build, installer, packaged check, tag and push to the private repo, release on hollisorg/iv-signal-releases).
   To test the update itself: build an older label with
   `npx.cmd electron-builder --win --x64 --dir --publish never -c.extraMetadata.version=0.1.0 -c.directories.output=<dir>`,
   copy `dist/win-unpacked/resources/app-update.yml` into it, and run `scripts/update-check.mjs` (it sets
-  `IV_SIGNAL_UPDATE_NO_INSTALL=1`). Afterwards delete only `%LOCALAPPDATA%\iv-signal-updater\pending`; `installer.exe` there
+  `IV_SIGNAL_UPDATE_NO_INSTALL=1`; add `IV_SIGNAL_UPDATE_FEED=http://127.0.0.1:<port>/` with `dist` served locally to test before publishing). Afterwards delete only `%LOCALAPPDATA%\iv-signal-updater\pending`; `installer.exe` there
   belongs to the real install.
 
 ## Snapshot (2026-11-13)
 
+- **v0.1.8 is the latest release and the first public one** (2026-11-13, Matt: "Yes, do all three"): https://github.com/hollisorg/iv-signal-releases/releases/tag/v0.1.8, unsigned, installer SHA-256 `e797d540…`. It is 0.1.7 (another session's Hivemind work, released only on the private repo) plus keyless updates. Checked: 14/14 tests, packaged check (37 tools, 8 pages, 0.1.8); the public installer and `latest.yml` downloaded without signing in, SHA-512 matches; a copy labelled 0.1.0 with no key or settings found 0.1.8 on the public repo, downloaded and verified it in 15 s. **Installed on Matt's PC** over 0.1.6 (closed normally, silent per-user install through Explorer, exit 0, installed app.asar matches the build, `app-update.yml` points at iv-signal-releases), reopened from the Desktop shortcut. Not yet seen: a real installed copy applying a later update by itself (the next release after 0.1.8 is the first).
 - **v0.1.4 is the latest private release** (2026-11-13, unsigned, installer SHA-256 `39fb0998…`, the downloaded release file matches the build). It adds:
   - **Networks:** one tile per network with its logo (Simple Icons, CC0; LinkedIn is a drawn "in" tile because Simple Icons dropped it); Connect/Manage opens a pop-up with the account and how posting works there.
   - **Facebook Page publishing** (`src/service/meta.js`): the person pastes a Page access token made in Graph API Explorer; it's checked (`/me` must be a Page), kept with safeStorage per brand (`settings.meta[brand_id].tokenEnc`, never returned by `appSettings`) and sent only as a Bearer header. Approved Facebook versions are scheduled on Facebook itself (`published=false` + `scheduled_publish_time`, 11 min to 29 days ahead) from the Calendar, or posted now after a confirm; pictures go up through `/photos`, videos stay by hand. `deliveries` (migration 3) records each hand-off; a scheduled version can't be edited, removed or archived until it's cancelled; every 3 minutes the app asks Facebook about due ones and marks them posted with the link. Agents have no publish tool, on purpose. Instagram needs pictures at a public address, so it waits for the server.
@@ -94,7 +96,7 @@ node scripts/release.mjs --unsigned [--dry]    # tests, build, installer, packag
 
 ## Next
 
-Matt: choose the update key source (then 0.1.4 installs itself), paste a Facebook Page token on Networks → Facebook to post directly, and set up Azure Artifact Signing (docs/CODE-SIGNING.md). Then the PostingPilot server for Instagram and the other networks once their reviews pass.
+Matt: paste a Facebook Page token on Networks → Facebook to post directly, and set up Azure Artifact Signing (docs/CODE-SIGNING.md). Then the PostingPilot server for Instagram and the other networks once their reviews pass.
 
 ## IV Workspace integration (0.1.5, local build)
 The IV Workspace top-bar button connects shared business basics and local creative handoffs. Incoming work opens as a native unapproved draft with selected media copied into the library. The shared store is separate; credentials, Never say rules and approvals stay local to Signal. See docs/iv-workspace.md. Tests add native import idempotency and rollback. Publication status is recorded separately; this source note does not establish a released or installed version.

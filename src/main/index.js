@@ -193,19 +193,9 @@ const cleanContext = (c = {}) => ({
   timezone: String(c.timezone || '').slice(0, 60),
 })
 
-// --- Updates: the private repo needs a read key on this PC (kept encrypted with the OS), or the GitHub CLI's sign-in ---
+// --- Updates: from the public releases-only repo, no key needed ---
 let updater = { check: async () => updateState(), install: () => false }
-function savedUpdateKey() {
-  const enc = readSettings().updateKeyEnc
-  if (!enc || !safeStorage.isEncryptionAvailable()) return null
-  try {
-    return safeStorage.decryptString(Buffer.from(enc, 'base64'))
-  } catch {
-    return null
-  }
-}
-const updateKeys = () => ({ savedKey: savedUpdateKey(), useGh: readSettings().updateUseGh === true })
-const updateView = () => ({ ...updateState(), hasKey: !!readSettings().updateKeyEnc, useGh: readSettings().updateUseGh === true, repo: `${REPO.owner}/${REPO.repo}` })
+const updateView = () => ({ ...updateState(), repo: `${REPO.owner}/${REPO.repo}` })
 
 // --- Pictures made with the person's Codex, one job at a time per brand, shown while they run ---
 const pictureJobs = new Map()
@@ -345,18 +335,6 @@ const METHODS = {
   updateState: () => updateView(),
   updateCheck: async () => { await updater.check(); return updateView() },
   updateInstall: () => updater.install(),
-  updateSaveKey: async ({ key }) => {
-    const token = String(key || '').trim()
-    if (!/^(github_pat_|ghp_|gho_)[A-Za-z0-9_]{20,}$/.test(token)) throw new Error('That doesn’t look like a GitHub key. It starts with github_pat_ or ghp_.')
-    if (!safeStorage.isEncryptionAvailable()) throw new Error('This PC can’t encrypt the key, so IV Signal won’t store it.')
-    const r = await net.fetch(`https://api.github.com/repos/${REPO.owner}/${REPO.repo}`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'IV-Signal' } })
-    if (!r.ok) throw new Error(r.status === 404 || r.status === 403 ? `That key can’t read ${REPO.owner}/${REPO.repo}. Give it read access to that repository’s contents.` : `GitHub said ${r.status}. Check the key and try again.`)
-    writeSettings({ updateKeyEnc: safeStorage.encryptString(token).toString('base64') })
-    await updater.check()
-    return updateView()
-  },
-  updateClearKey: () => { writeSettings({ updateKeyEnc: null }); return updateView() },
-  updateUseGh: async ({ on }) => { writeSettings({ updateUseGh: !!on }); if (on) await updater.check(); return updateView() },
 
   // pictures with Codex
   pictureShapes: () => SHAPES,
@@ -809,7 +787,7 @@ else {
     createWindow()
     setInterval(() => checkDueDeliveries().catch(() => {}), 3 * 60 * 1000)
     setTimeout(() => checkDueDeliveries().catch(() => {}), 20000)
-    updater = initUpdater((state) => send('update:changed', { ...state, hasKey: !!readSettings().updateKeyEnc, useGh: readSettings().updateUseGh === true, repo: `${REPO.owner}/${REPO.repo}` }), updateKeys)
+    updater = initUpdater((state) => send('update:changed', { ...state, repo: `${REPO.owner}/${REPO.repo}` }))
   })
   let cleanedUp = false
   app.on('before-quit', () => {

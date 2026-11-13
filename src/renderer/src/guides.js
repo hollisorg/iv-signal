@@ -19,7 +19,7 @@ export const PLACES = {
   results: { page: 'calendar', selector: '[data-guide="results"]', fallback: '[data-guide="calendar"]', title: 'How posts did', text: 'Add the numbers for posted versions. Ask the chat what worked and it saves the lesson to your Brand Brain.' },
   approval_pack: { page: 'approve', selector: '[data-guide="approval-pack"]', fallback: '.page-toolbar', title: 'Share for approval', text: 'Save chosen posts as one page your client can open anywhere. They reply with what they approve, and you approve it here.' },
   agent: { page: 'settings', selector: '#setup-agent', title: 'Bring your own agent', text: 'The chat runs on your own Claude Code, Codex or Hermes, on your own plan. IV Signal needs no API key of its own.' },
-  updates: { page: 'settings', selector: '#setup-updates', title: 'Staying up to date', text: 'IV Signal checks its private releases on launch and every six hours, downloads in the background and installs when you restart. Each PC needs a read-only GitHub key, or your GitHub CLI sign-in.' },
+  updates: { page: 'settings', selector: '#setup-updates', title: 'Staying up to date', text: 'IV Signal checks for a new version on launch and every six hours, downloads it in the background and installs it when you restart. Nothing to set up.' },
   connections: { page: 'settings', selector: '#setup-connections', title: 'Use it from your other apps', text: 'Connect IV Signal to Claude Code, Codex or Claude Desktop. They work on the same brands and posts.' },
 }
 export const GUIDES = {
