@@ -1,6 +1,6 @@
 # Hivemind: local app continuity
 
-This build connects IV Outreach 0.12.3, IV Studio 1.1.13 and IV Signal 0.1.9 on one Windows account. It does not require a new account, server or provider subscription.
+This build connects IV Outreach 0.12.4, IV Studio 1.1.14 and IV Signal 0.1.10 on one Windows account. It does not require a new account, server or provider subscription.
 
 ## Use it
 

@@ -28,8 +28,8 @@ export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, 
       try {
         const next = await api('state'); if (stopped) return
         setState(next); stateRef.current = next
-        if (next.pending && next.pending !== opened.current) {
-          opened.current = next.pending; setSelected(next.pending); setOpen(true)
+        if (next.pending && !active.current && next.pendingRequest !== opened.current) {
+          opened.current = next.pendingRequest; setSelected(next.pending); setOpen(true)
           openDraft(next.pending)
         }
       } catch { /* The workspace is optional; the other app features stay available. */ }

@@ -7,6 +7,7 @@ import { APPS, IVWorkspace, cleanBrand, fingerprint, handoffArgument } from './i
 // Main-process adapter. No renderer-selected executable, shell command or file path.
 export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, receive, disabled = false }) {
   let store, pending = handoffArgument(process.argv, appId)
+  let pendingRequest = pending ? 1 : 0
   const isolatedProfile = appId === 'studio' ? process.env.IV_STUDIO_USER_DATA : appId === 'signal' ? process.env.IV_SIGNAL_DATA_DIR : process.env.FITSCOUT_DATA_DIR
   const root = process.env.IV_WORKSPACE_DIR || (isolatedProfile ? join(dataDir, 'iv-workspace-test') : undefined)
   const get = () => {
@@ -74,7 +75,7 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
   const api = {
     state: () => {
       const w = get(), conflicts = syncBrands()
-      return { appId, pending, brands: w.brands().map(b => ({ ...b, logoPreview: b.logo ? w.preview(b.logo) : null })), handoffs: w.handoffs().map(h => ({ ...h, receipt: h.receipts[w.profile], assets: h.assets.map(id => w.asset(id)) })), apps: Object.keys(APPS).map(id => { const { executable, ...info } = installed(id); return info }), links: w.links(), conflicts }
+      return { appId, pending, pendingRequest, brands: w.brands().map(b => ({ ...b, logoPreview: b.logo ? w.preview(b.logo) : null })), handoffs: w.handoffs().map(h => ({ ...h, receipt: h.receipts[w.profile], assets: h.assets.map(id => w.asset(id)) })), apps: Object.keys(APPS).map(id => { const { executable, ...info } = installed(id); return info }), links: w.links(), conflicts }
     },
     saveBrand: ({ brand, revision }) => get().saveBrand(brand, revision),
     shareNative: ({ localId, preferLocal }) => shareNative(localId, !!preferLocal),
@@ -96,8 +97,10 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
     receive: async ({ id }) => {
       const w = get(), h = w.handoff(id)
       if (h.target !== appId || !receive) throw Error('Open the handoff in its receiving app.')
+      const request = pendingRequest
       const result = await receive(h, w, useBrand)
-      w.receipt(id, result); if (pending === id) pending = null
+      w.receipt(id, result)
+      if (pending === id && request === pendingRequest) pending = null
       return result
     },
     dismiss: () => { pending = null },
@@ -110,7 +113,13 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
   }
   return {
     get, api, shareNative,
-    capture: args => { const id = handoffArgument(args, appId); if (id) pending = id },
+    capture: args => {
+      const id = handoffArgument(args, appId)
+      if (id) {
+        pending = id
+        pendingRequest++
+      }
+    },
     ready: () => {
       if (disabled) return
       const w = get()
