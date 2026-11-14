@@ -1,8 +1,15 @@
-// Renders build/icon.svg to build/icon.png (1024) and build/icon-256.png with Electron's own Chromium.
-// Usage: npx electron scripts/render-icon.cjs
+// Renders the old code-drawn build/icon.svg to build/icon.png (1024) and build/icon-256.png with Electron's Chromium.
+// Since 2026-11-14 the app icon is IV-family art (build/icon.png, icon-256.png, icon.ico; masters and recipe in
+// D:\IV-Art\app-icons-20261114), so this only runs with --from-svg, to avoid overwriting it by accident.
+// Usage: npx electron scripts/render-icon.cjs --from-svg
 const { app, BrowserWindow } = require('electron')
 const { readFileSync, writeFileSync } = require('node:fs')
 const { join } = require('node:path')
+
+if (!process.argv.includes('--from-svg')) {
+  console.log('The app icon is art now; pass --from-svg to replace it with the old SVG icon.')
+  process.exit(0)
+}
 
 app.whenReady().then(async () => {
   const svg = readFileSync(join(__dirname, '..', 'build', 'icon.svg'), 'utf8')
