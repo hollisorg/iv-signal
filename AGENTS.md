@@ -33,7 +33,7 @@ IV Outreach's look and way of working. Brief: `Downloads\IV_Signal_Product_Build
   Library files reach the window through `ivmedia://<sha>.<ext>` (media folder only).
 - `src/service/`: harness, agent install and sign-in, chat, Hermes ACP, visual guidance (`ui-guide.js`), the welcome flow.
   Ported from IV Outreach (Matt's own code, which was ported from IV Studio, MIT).
-- Art: six Codex illustrations in the IV printmaking style (`docs/art.md`); masters in `C:\Users\Matthew\iv-signal-art`.
+- Art: six Codex illustrations in the IV printmaking style (`docs/art.md`); masters kept outside the repo.
   Icon drawn in code: `build/icon.svg` (IV eye plus coral broadcast waves), rendered by `npx electron scripts/render-icon.cjs`.
 
 ## Rules

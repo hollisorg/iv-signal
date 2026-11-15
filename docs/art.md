@@ -2,7 +2,7 @@
 
 Six illustrations made on 2026-11-12 with ChatGPT image generation through the Codex CLI
 (`~/.claude/skills/chapter-flow-site/scripts/codex-images.ps1`), using IV Studio's eye art (`iv-eye.webp`) as a style
-reference only. Prompts: `C:\Users\Matthew\iv-signal-art\jobs.json`; masters (PNG) in the same folder.
+reference only. Prompts and masters (PNG) are kept outside the repo.
 Each was checked by eye for palette, subject and no lettering, then converted to WebP (quality 84) in
 `src/renderer/src/assets/`.
 
