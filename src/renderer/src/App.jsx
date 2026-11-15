@@ -67,6 +67,8 @@ export default function App() {
     if (opts.post !== undefined) setPost(opts.post)
   }
   useEffect(() => { document.querySelector('main')?.scrollTo({ top: 0 }) }, [page])
+  // The business chosen in IV Hivemind (or another IV app) changed: show it here too.
+  useEffect(() => on('workspace:active', ({ brandId: id }) => { setBrandId(id); reloadWorkspace() }), [])
   useEffect(() => {
     call('chatWindowState').then(setChatWindow)
     const off = on('chat:window', (state) => { setChatWindow(state); if (state.returned) setChatOpen(true) })

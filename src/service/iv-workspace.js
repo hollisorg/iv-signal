@@ -55,7 +55,7 @@ function mediaKind(file) {
 
 export class IVWorkspace {
   constructor({ root = workspaceDir(), appId, profile = '' }) {
-    if (!APPS[appId]) throw Error('Unknown IV app.')
+    if (!APPS[appId] && appId !== 'hivemind') throw Error('Unknown IV app.')
     this.root = root; this.appId = appId; this.profile = hash(profile).slice(0, 20)
     mkdirSync(root, { recursive: true })
     this.db = new DatabaseSync(join(root, 'workspace.db'))
@@ -86,6 +86,16 @@ export class IVWorkspace {
       const b = { ...clean, id: old?.id || randomUUID(), revision: (old?.revision || 0) + 1, updatedAt: at(), updatedBy: this.appId }
       this.db.prepare('insert into brands values(?,?) on conflict(id) do update set value=excluded.value').run(b.id, JSON.stringify(b)); return b
     })
+  }
+  // The business the person is working on across the IV apps, set in IV Hivemind or by picking a shared business in
+  // an app. '' means none (all businesses). Each app follows it to its own linked copy.
+  active() { const a = parse(this.db.prepare('select value from meta where key=?').get('active')); return a && typeof a.brandId === 'string' ? a : { brandId: '', at: null, by: null } }
+  setActive(brandId) {
+    const id = brandId || ''
+    if (id) this.brand(id)
+    const now = this.active(); if (now.brandId === id) return now
+    const a = { brandId: id, at: at(), by: this.appId }
+    this.db.prepare('insert into meta values(?,?) on conflict(key) do update set value=excluded.value').run('active', JSON.stringify(a)); return a
   }
   link(localId) { return parse(this.db.prepare('select value from links where key=?').get(`${this.appId}:${this.profile}:${localId}`)) }
   links() { return this.db.prepare('select key,value from links where key like ?').all(`${this.appId}:${this.profile}:%`).map(r => ({ localId: r.key.split(':').slice(2).join(':'), ...parse(r) })) }

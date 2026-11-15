@@ -449,6 +449,7 @@ const METHODS = {
   workspaceSelect: ({ brandId }) => {
     sg.requireBrand(getDb(), brandId)
     writeSettings({ selectedBrandId: brandId })
+    ivWorkspace.picked(brandId)
     return true
   },
   chooseBrandImage: async ({ kind }) => {
@@ -778,6 +779,12 @@ else {
   })
   app.whenReady().then(async () => {
     ivWorkspace.ready()
+    // Follow the business chosen in IV Hivemind (or another IV app): select this app's copy of it.
+    ivWorkspace.followActive({ select: ({ localId }) => {
+      if (!localId || readSettings().selectedBrandId === localId) return
+      writeSettings({ selectedBrandId: localId })
+      send('workspace:active', { brandId: localId })
+    } })
     protocol.handle('ivmedia', serveMedia)
     try {
       uiBridgeServer = await startUiBridge({ places: () => guidePlaces(), inspect: inspectUi, show: showUi })

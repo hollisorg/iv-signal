@@ -1,8 +1,12 @@
-import { app, dialog } from 'electron'
+import { app, dialog, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { APPS, IVWorkspace, cleanBrand, fingerprint, handoffArgument } from './iv-workspace.js'
+
+// Where people get IV Hivemind, and where it installs (per user, the standard folder).
+export const HIVEMIND_PAGE = 'https://infinitevariance.ai/downloads'
+const hivemindExe = () => process.env.IV_HIVEMIND_EXE || join(app.getPath('appData'), '..', 'Local', 'Programs', 'IV Hivemind', 'IV Hivemind.exe')
 
 // Main-process adapter. No renderer-selected executable, shell command or file path.
 export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, receive, disabled = false }) {
@@ -75,8 +79,21 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
   const api = {
     state: () => {
       const w = get(), conflicts = syncBrands()
-      return { appId, pending, pendingRequest, brands: w.brands().map(b => ({ ...b, logoPreview: b.logo ? w.preview(b.logo) : null })), handoffs: w.handoffs().map(h => ({ ...h, receipt: h.receipts[w.profile], assets: h.assets.map(id => w.asset(id)) })), apps: Object.keys(APPS).map(id => { const { executable, ...info } = installed(id); return info }), links: w.links(), conflicts }
+      return { appId, pending, pendingRequest, active: w.active(), brands: w.brands().map(b => ({ ...b, logoPreview: b.logo ? w.preview(b.logo) : null })), handoffs: w.handoffs().map(h => ({ ...h, receipt: h.receipts[w.profile], assets: h.assets.map(id => w.asset(id)) })), apps: Object.keys(APPS).map(id => { const { executable, ...info } = installed(id); return info }), links: w.links(), conflicts }
     },
+    // The Hivemind button's pop-up: open IV Hivemind when it's installed, otherwise its download page.
+    hivemind: () => ({ installed: existsSync(hivemindExe()), page: HIVEMIND_PAGE }),
+    openHivemind: async () => {
+      const exe = hivemindExe()
+      if (!existsSync(exe)) throw Error('IV Hivemind is not installed on this PC.')
+      await new Promise((ok, no) => {
+        const child = spawn(exe, [], { detached: true, stdio: 'ignore', windowsHide: false })
+        child.once('error', () => no(Error('Could not open IV Hivemind.')))
+        child.once('spawn', () => { child.unref(); ok() })
+      })
+      return { opened: true }
+    },
+    getHivemind: async () => { await shell.openExternal(HIVEMIND_PAGE); return { page: HIVEMIND_PAGE } },
     saveBrand: ({ brand, revision }) => get().saveBrand(brand, revision),
     shareNative: ({ localId, preferLocal }) => shareNative(localId, !!preferLocal),
     useBrand: ({ brandId, localId }) => useBrand(brandId, localId),
@@ -111,8 +128,45 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
       await launch(next); return next
     }
   }
+  // Follow the active business: on launch and whenever it changes (in Hivemind or another app), select this app's copy
+  // of it, making the copy from the shared profile first if this app has none. Studio has no businesses of its own and
+  // just gets told which one is active.
+  let seenActive = null
+  function followActive({ select, interval = 3000 }) {
+    if (disabled) return () => {}
+    const check = () => {
+      try {
+        const w = get(), a = w.active(), key = `${a.brandId}|${a.at}`
+        if (key === seenActive) return
+        seenActive = key
+        if (!a.brandId) return select({ brandId: '', localId: null, brand: null })
+        const brand = w.brand(a.brandId)
+        let localId = null
+        if (importBrand) {
+          const link = w.links().find(l => l.brandId === a.brandId && native(l.localId))
+          localId = link ? link.localId : useBrand(a.brandId).localId
+        }
+        select({ brandId: a.brandId, localId, brand })
+      } catch {}
+    }
+    check()
+    const timer = setInterval(check, interval)
+    timer.unref?.()
+    return () => clearInterval(timer)
+  }
+  // The person picked a business inside this app: a shared one becomes the active business in every IV app.
+  function picked(localId) {
+    if (disabled || !localId) return
+    try {
+      const w = get(), link = w.link(localId)
+      if (!link) return
+      const a = w.setActive(link.brandId)
+      seenActive = `${a.brandId}|${a.at}`
+    } catch {}
+  }
   return {
-    get, api, shareNative,
+    get, api, shareNative, followActive, picked,
+    active: () => { try { return get().active() } catch { return { brandId: '', at: null, by: null } } },
     capture: args => {
       const id = handoffArgument(args, appId)
       if (id) {

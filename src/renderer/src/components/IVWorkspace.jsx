@@ -6,12 +6,16 @@ import { HivemindMark, HivemindLoading, handoffBeat } from './HivemindMark'
 const NAMES = { outreach: 'IV Outreach', studio: 'IV Studio', signal: 'IV Signal' }
 const EMPTY = { name: '', website: '', offer: '', audience: '', voice: '', visual: '', location: '', goal: '', accent: '#bb2349', logo: null }
 
-export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, projectId, disabled = false }) {
+// launcher: what to show instead of the red Hivemind button (IV Studio passes its title-bar logo, which then
+// glows softly and opens Hivemind when clicked).
+export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, projectId, disabled = false, launcher = null }) {
   const [open, setOpen] = useState(false), [state, setState] = useState(null), [tab, setTab] = useState('work')
   const [selected, setSelected] = useState(null), [editing, setEditing] = useState(null)
   const [caption, setCaption] = useState(''), [channel, setChannel] = useState('linkedin'), [assets, setAssets] = useState([])
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('')
   const [transition, setTransition] = useState('')
+  // The Hivemind button opens a short pop-up: what Hivemind is, then Open Hivemind (installed) or Get Hivemind.
+  const [intro, setIntro] = useState(null)
   const opened = useRef(null), active = useRef(false), onOpenRef = useRef(onOpen), stateRef = useRef(null), dialogRef = useRef(null)
   onOpenRef.current = onOpen
   const load = async () => { const next = await api('state'); setState(next); stateRef.current = next; return next }
@@ -59,6 +63,8 @@ export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, 
     return () => { clearTimeout(timer); document.removeEventListener('keydown', key); previous?.focus?.() }
   }, [open, busy])
   const h = state?.handoffs.find(x => x.id === selected)
+  // The business active across the IV apps (chosen in IV Hivemind), shown on the button.
+  const activeName = state?.active?.brandId ? state.brands.find(b => b.id === state.active.brandId)?.name || '' : ''
   const choose = item => { setSelected(item.id); setCaption(item.brief.caption || ''); setAssets(item.assets); setChannel(['facebook','instagram','linkedin','x','threads','tiktok','youtube','pinterest','google'].includes(item.brief.channel.toLowerCase()) ? item.brief.channel.toLowerCase() : 'linkedin') }
   const showWorkspace = () => {
     setOpen(true); setError(''); load().then(s => {
@@ -66,9 +72,45 @@ export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, 
       if (current) choose(current)
     }).catch(e => setError(e.message))
   }
+  const showIntro = () => { setIntro({ loading: true }); api('hivemind').then(info => setIntro(info)).catch(e => setIntro({ installed: false, problem: e.message })) }
+  const introAct = async (method) => {
+    setIntro(previous => ({ ...previous, busy: true, problem: '' }))
+    try { await api(method); setIntro(null) } catch (e) { setIntro(previous => ({ ...previous, busy: false, problem: e.message })) }
+  }
+  useEffect(() => {
+    if (!intro) return
+    const key = e => { if (e.key === 'Escape') setIntro(null) }
+    document.addEventListener('keydown', key)
+    return () => document.removeEventListener('keydown', key)
+  }, [intro])
   return <>
-    <button type="button" className="ivw-launch" onClick={showWorkspace} disabled={disabled} title={disabled ? 'Shared workspace is off in Incognito' : 'Continue across your IV apps'}><HivemindMark size="small"/><span>Hivemind</span></button>
+    {launcher
+      ? <button type="button" className="ivw-launch-logo" onClick={showIntro} disabled={disabled} aria-label="Open Hivemind" title={disabled ? 'Hivemind is off in Incognito' : `Hivemind: continue across your IV apps${activeName ? `. Working on ${activeName}` : ''}`}>{launcher}</button>
+      : <button type="button" className="ivw-launch" onClick={showIntro} disabled={disabled} title={disabled ? 'Shared workspace is off in Incognito' : 'Continue across your IV apps'}><HivemindMark size="small"/><span>Hivemind</span>{activeName && <em className="ivw-active" title={`Working on ${activeName}. Switch businesses in IV Hivemind.`}>{activeName}</em>}</button>}
     <HivemindLoading label={transition}/>
+    {intro && createPortal(<div className="ivw-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setIntro(null) }}>
+      <section className="ivw-intro" role="dialog" aria-modal="true" aria-labelledby="ivw-intro-title">
+        <button className="ivw-close" aria-label="Close" onClick={() => setIntro(null)}>×</button>
+        <HivemindMark active/>
+        <small>ONE BUSINESS. YOUR IV APPS.</small>
+        <h1 id="ivw-intro-title">IV Hivemind</h1>
+        <p>Hivemind sits on your desktop and connects IV Outreach, IV Signal and IV Studio.</p>
+        <ul>
+          <li><b>One business everywhere.</b> Pick the business you're working on once and every IV app follows it, with the same memory of you and that business.</li>
+          <li><b>Just ask.</b> Its chat runs on your own Claude Code or Codex and does the work in the right app while you watch. Anything that needs your OK waits for you.</li>
+          <li><b>Pick up where you left off.</b> Handoffs between the apps are one click away.</li>
+        </ul>
+        {activeName && <p className="ivw-intro-active">Working on <b>{activeName}</b></p>}
+        {intro.problem && <p className="ivw-error" role="alert">{intro.problem}</p>}
+        <div className="ivw-intro-actions">
+          {intro.loading ? <button className="ivw-primary" disabled>Checking…</button>
+            : intro.installed ? <button className="ivw-primary" disabled={intro.busy} onClick={() => introAct('openHivemind')}>{intro.busy ? 'Opening…' : 'Open Hivemind'}</button>
+            : <button className="ivw-primary" disabled={intro.busy} onClick={() => introAct('getHivemind')}>Get Hivemind ↗</button>}
+          <button className="ivw-quiet" onClick={() => { setIntro(null); showWorkspace() }}>Handoffs in this app</button>
+        </div>
+        {!intro.loading && !intro.installed && <p className="ivw-note">Free for IV users. Opens the Infinite Variance downloads page.</p>}
+      </section>
+    </div>, document.body)}
     {open && createPortal(<div className="ivw-backdrop" onMouseDown={e => { if (e.target === e.currentTarget && !busy) setOpen(false) }}>
       <section className="ivw-panel" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="ivw-title">
         <header className="ivw-header"><div className="ivw-brand-heading"><HivemindMark active/><div><small>ONE BUSINESS. YOUR IV APPS.</small><h1 id="ivw-title">Hivemind</h1><p>Carry the context. Keep creating.</p></div></div><button className="ivw-close" aria-label="Close Hivemind" onClick={() => setOpen(false)} disabled={busy}>×</button></header>
