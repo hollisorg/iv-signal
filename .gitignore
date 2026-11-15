@@ -9,3 +9,6 @@ data/
 *.secret.json
 build/icon-256.png
 docs/verification/
+
+# Working notes stay on the maintainer's PC.
+AGENTS.md
