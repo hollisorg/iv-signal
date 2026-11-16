@@ -84,7 +84,7 @@ test('the approval pack shows the exact words, escaped, with no outside calls', 
   const { db, dir } = fresh()
   const b = s.createBrand(db, { name: 'Kiln & Co', profile: { accent: '#3355ff' } })
   const p = s.createPost(db, { brand_id: b.id, title: 'Launch <b>day</b>', variants: [{ channel: 'instagram', text: 'Mugs are out.\nCome by.' }, { channel: 'x', text: 'Mugs "out" now' }] })
-  const html = approvalPackHtml({ brand: b, posts: [s.getPost(db, p.id)], note: 'Reply by Friday', from: 'Matt', timezone: 'America/New_York' })
+  const html = approvalPackHtml({ brand: b, posts: [s.getPost(db, p.id)], note: 'Reply by Friday', from: 'Alex', timezone: 'America/New_York' })
   assert.match(html, /Launch &lt;b&gt;day&lt;\/b&gt;/)
   assert.match(html, /Mugs are out\.<br>Come by\./)
   assert.match(html, /Mugs &quot;out&quot; now/)
@@ -115,7 +115,7 @@ function fakeGraph() {
       const send = (code, json) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(json)) }
       const token = auth.replace(/^Bearer /, '')
       if (token.startsWith('EXPIRED')) return send(400, { error: { message: 'Error validating access token: Session has expired', code: 190 } })
-      if (url.pathname === '/me') return token.startsWith('USER') ? send(200, { id: '9', name: 'Matt' }) : send(200, { id: '777', name: 'Kiln Studio', category: 'Shopping & retail', link: 'https://www.facebook.com/kiln' })
+      if (url.pathname === '/me') return token.startsWith('USER') ? send(200, { id: '9', name: 'Alex' }) : send(200, { id: '777', name: 'Kiln Studio', category: 'Shopping & retail', link: 'https://www.facebook.com/kiln' })
       if (url.pathname === '/777/feed' && req.method === 'POST') return send(200, { id: '777_1001' })
       if (url.pathname === '/777/photos' && req.method === 'POST') return send(200, { id: '55', post_id: '777_1002' })
       if (url.pathname === '/777_1001' && req.method === 'GET') return send(200, { id: '777_1001', is_published: false })
