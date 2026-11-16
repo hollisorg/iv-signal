@@ -1,0 +1,54 @@
+# Builds IV Signal for macOS (Apple Silicon and Intel: a .dmg and a .zip each) on GitHub's Mac machines and checks it:
+# the app bundle, the unit tests, the MCP server through the app's own binary, every page of the window, and the Mac
+# updater end to end (scripts/ci-mac.sh). The app is ad-hoc signed, not with an Apple Developer ID: macOS asks people
+# to allow it once (System Settings -> Privacy & Security -> Open Anyway), and the app swaps its own bundle to update
+# (src/main/macupdater.js) because macOS's own updater needs a Developer ID.
+# It runs on pushes to the `mac` branch and by hand (Actions -> Mac -> Run workflow). It only builds and checks:
+# scripts/release.mjs downloads this run's files and adds them, with one latest-mac.yml for both chips, to the release
+# on the public hollisorg/iv-signal-releases repo (this repo's token can't write there).
+name: Mac
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mac]
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15 # Apple Silicon
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build the app (ad-hoc signed)
+        run: npm run dist:mac -- --${{ matrix.arch }} -c.mac.identity=- -c.mac.hardenedRuntime=false
+      - name: Checks
+        run: bash scripts/ci-mac.sh
+      - run: mv dist/latest-mac.yml dist/latest-mac-${{ matrix.arch }}.yml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iv-signal-mac-${{ matrix.arch }}
+          path: |
+            dist/IV-Signal-mac-${{ matrix.arch }}.dmg
+            dist/IV-Signal-mac-${{ matrix.arch }}.dmg.blockmap
+            dist/IV-Signal-mac-${{ matrix.arch }}.zip
+            dist/IV-Signal-mac-${{ matrix.arch }}.zip.blockmap
+            dist/latest-mac-${{ matrix.arch }}.yml
+            ci-out/
+          if-no-files-found: warn

@@ -9,7 +9,8 @@ import { randomUUID } from 'node:crypto'
 
 export function defaultDataDir() {
   if (process.env.IV_SIGNAL_DATA_DIR) return process.env.IV_SIGNAL_DATA_DIR
-  const base = process.env.APPDATA || join(homedir(), '.config')
+  // %APPDATA% on Windows, ~/Library/Application Support on a Mac (where macOS apps keep their data), ~/.config elsewhere
+  const base = process.platform === 'darwin' ? join(homedir(), 'Library', 'Application Support') : process.env.APPDATA || join(homedir(), '.config')
   return join(base, 'IV Signal')
 }
 

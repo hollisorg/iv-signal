@@ -105,10 +105,12 @@ export default function IVWorkspace({ api, appId, nativeId, nativeName, onOpen, 
         <div className="ivw-intro-actions">
           {intro.loading ? <button className="ivw-primary" disabled>Checking…</button>
             : intro.installed ? <button className="ivw-primary" disabled={intro.busy} onClick={() => introAct('openHivemind')}>{intro.busy ? 'Opening…' : 'Open Hivemind'}</button>
+            : intro.unavailable ? null
             : <button className="ivw-primary" disabled={intro.busy} onClick={() => introAct('getHivemind')}>Get Hivemind ↗</button>}
           <button className="ivw-quiet" onClick={() => { setIntro(null); showWorkspace() }}>Handoffs in this app</button>
         </div>
-        {!intro.loading && !intro.installed && <p className="ivw-note">Free for IV users. Opens the Infinite Variance downloads page.</p>}
+        {!intro.loading && !intro.installed && intro.unavailable && <p className="ivw-note">{intro.unavailable}</p>}
+        {!intro.loading && !intro.installed && !intro.unavailable && <p className="ivw-note">Free for IV users. Opens the Infinite Variance downloads page.</p>}
       </section>
     </div>, document.body)}
     {open && createPortal(<div className="ivw-backdrop" onMouseDown={e => { if (e.target === e.currentTarget && !busy) setOpen(false) }}>

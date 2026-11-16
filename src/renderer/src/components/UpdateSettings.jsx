@@ -13,8 +13,8 @@ export function useUpdate() {
 
 export function UpdateButton() {
   const [u] = useUpdate()
-  if (u?.status !== 'ready') return null
-  return <button className="btn btn-primary btn-small update-now" onClick={() => call('updateInstall')}>↻ Update to {u.available}</button>
+  if (u?.status !== 'ready' && u?.status !== 'available') return null
+  return <button className="btn btn-primary btn-small update-now" onClick={() => call('updateInstall')}>{u.status === 'ready' ? `↻ Update to ${u.available}` : `Get ${u.available}`}</button>
 }
 
 const SAY = {
@@ -24,6 +24,7 @@ const SAY = {
   current: 'You have the newest version.',
   downloading: 'Downloading',
   ready: 'Ready to install',
+  available: 'A new version is out:',
   error: 'Couldn’t check for updates.',
 }
 
@@ -49,10 +50,11 @@ export default function UpdateSettings({ notify }) {
         <span>This copy</span>
         <div>
           <strong>IV Signal {u.version}</strong>
-          <small>{SAY[u.status] || u.status}{u.status === 'downloading' && u.available ? ` ${u.available} (${Math.round(u.percent || 0)}%)` : ''}{u.status === 'ready' ? ` ${u.available}. It installs when you restart or quit.` : ''}{u.checkedAt ? ` Last checked ${when(u.checkedAt)}.` : ''}</small>
+          <small>{SAY[u.status] || u.status}{u.status === 'downloading' && u.available ? ` ${u.available} (${Math.round(u.percent || 0)}%)` : ''}{u.status === 'ready' ? ` ${u.available}. It installs when you restart or quit.` : ''}{u.status === 'available' ? ` ${u.available}.` : ''}{u.checkedAt ? ` Last checked ${when(u.checkedAt)}.` : ''}</small>
+          {u.why && u.status === 'available' && <small>{u.why}</small>}
           {u.error && <small className="bad">{u.error}</small>}
           <div className="form-actions">
-            {u.status === 'ready' ? <button className="btn btn-primary" onClick={() => call('updateInstall')}>Restart to update</button> : <button className="btn" disabled={busy || u.status === 'dev' || u.status === 'checking' || u.status === 'downloading'} onClick={run(() => call('updateCheck'))}>Check for updates</button>}
+            {u.status === 'ready' ? <button className="btn btn-primary" onClick={() => call('updateInstall')}>Restart to update</button> : u.status === 'available' ? <button className="btn btn-primary" onClick={() => call('updateInstall')}>Open the download page</button> : <button className="btn" disabled={busy || u.status === 'dev' || u.status === 'checking' || u.status === 'downloading'} onClick={run(() => call('updateCheck'))}>Check for updates</button>}
           </div>
         </div>
       </div>

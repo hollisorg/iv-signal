@@ -1,6 +1,6 @@
 // Checks a packaged build on a throwaway data folder: its MCP server (through the app's own exe in Node mode) lists
 // IV Signal's tools and drafts a post, and its window opens every page with no page errors.
-// Usage: node scripts/packaged-check.mjs [path-to-IV Signal.exe] [out-dir]
+// Usage: node scripts/packaged-check.mjs [path-to-IV Signal.exe, or IV Signal.app/Contents/MacOS/IV Signal on a Mac] [out-dir]
 import { _electron as electron } from 'playwright'
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -16,8 +16,9 @@ mkdirSync(out, { recursive: true })
 const data = mkdtempSync(join(tmpdir(), 'ivsignal-pkg-'))
 const errors = []
 
-// The MCP server, launched the way outside agents launch it.
-const script = join(dirname(exe), 'resources', 'app.asar', 'out', 'main', 'mcp.js')
+// The MCP server, launched the way outside agents launch it. A Mac bundle keeps its resources in Contents/Resources.
+const resources = /\.app[\\/]Contents[\\/]MacOS[\\/][^\\/]+$/.test(exe) ? join(dirname(exe), '..', 'Resources') : join(dirname(exe), 'resources')
+const script = join(resources, 'app.asar', 'out', 'main', 'mcp.js')
 const client = new Client({ name: 'packaged-check', version: '1' })
 await client.connect(new StdioClientTransport({ command: exe, args: [script], env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', IV_SIGNAL_DATA_DIR: data } }))
 const tools = (await client.listTools()).tools.map((t) => t.name)

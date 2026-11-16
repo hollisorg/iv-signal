@@ -1,12 +1,24 @@
 import { app, dialog, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { APPS, IVWorkspace, cleanBrand, fingerprint, handoffArgument } from './iv-workspace.js'
 
 // Where people get IV Hivemind, and where it installs (per user, the standard folder).
 export const HIVEMIND_PAGE = 'https://infinitevariance.ai/downloads'
-const hivemindExe = () => process.env.IV_HIVEMIND_EXE || join(app.getPath('appData'), '..', 'Local', 'Programs', 'IV Hivemind', 'IV Hivemind.exe')
+// Where an IV app is installed: per user in %LOCALAPPDATA%\Programs on Windows; in /Applications (or ~/Applications)
+// on a Mac, where the program is inside the app bundle.
+export function appExecutable(name, platform = process.platform, home = homedir()) {
+  if (platform === 'darwin') {
+    const bundles = [join('/Applications', `${name}.app`), join(home, 'Applications', `${name}.app`)]
+    return join(bundles.find(b => existsSync(b)) || bundles[0], 'Contents', 'MacOS', name)
+  }
+  return join(app.getPath('appData'), '..', 'Local', 'Programs', name, `${name}.exe`)
+}
+const hivemindExe = () => process.env.IV_HIVEMIND_EXE || appExecutable('IV Hivemind')
+// IV Hivemind is a Windows desktop overlay; there's no Mac build yet, so a Mac copy says so instead of a download.
+const HIVEMIND_ELSEWHERE = process.platform === 'win32' || process.env.IV_HIVEMIND_EXE ? null : 'IV Hivemind runs on Windows for now. Handoffs between the IV apps on this computer still work from here.'
 
 // Main-process adapter. No renderer-selected executable, shell command or file path.
 export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, receive, disabled = false }) {
@@ -23,7 +35,7 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
   const nativeFingerprint = b => fingerprint({ ...localProfile(b), logo_id: b.profile?.logo_id || '' })
   const installed = target => {
     const test = process.env.IV_WORKSPACE_TEST === '1' ? JSON.parse(process.env.IV_WORKSPACE_TEST_APPS || '{}') : {}
-    const executable = test[target] || join(app.getPath('appData'), '..', 'Local', 'Programs', APPS[target], `${APPS[target]}.exe`)
+    const executable = test[target] || appExecutable(APPS[target])
     const registered = get().db.prepare('select value from meta where key=?').get(`app:${target}`)
     const record = registered ? JSON.parse(registered.value) : null
     return { id: target, name: APPS[target], ready: existsSync(executable) && !!record && record.protocol === 1 && resolve(record.executable) === resolve(executable), executable, version: record?.version }
@@ -82,7 +94,7 @@ export function workspaceHost({ appId, dataDir, nativeBrands, importBrand, recei
       return { appId, pending, pendingRequest, active: w.active(), brands: w.brands().map(b => ({ ...b, logoPreview: b.logo ? w.preview(b.logo) : null })), handoffs: w.handoffs().map(h => ({ ...h, receipt: h.receipts[w.profile], assets: h.assets.map(id => w.asset(id)) })), apps: Object.keys(APPS).map(id => { const { executable, ...info } = installed(id); return info }), links: w.links(), conflicts }
     },
     // The Hivemind button's pop-up: open IV Hivemind when it's installed, otherwise its download page.
-    hivemind: () => ({ installed: existsSync(hivemindExe()), page: HIVEMIND_PAGE }),
+    hivemind: () => ({ installed: existsSync(hivemindExe()), page: HIVEMIND_PAGE, unavailable: HIVEMIND_ELSEWHERE }),
     openHivemind: async () => {
       const exe = hivemindExe()
       if (!existsSync(exe)) throw Error('IV Hivemind is not installed on this PC.')

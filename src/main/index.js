@@ -7,7 +7,7 @@ import { homedir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import * as sg from '../core/index.js'
-import { findHarnesses, codexWindow } from '../service/harness.js'
+import { findHarnesses, codexWindow, EXTRA_BIN } from '../service/harness.js'
 import { findHermes } from '../service/hermesacp.js'
 import { AGENT_INFO, runInstall, openSignIn, signedIn } from '../service/agentinstall.js'
 import { AGENT_NAMES } from '../service/agentrun.js'
@@ -27,6 +27,9 @@ import { approvalPackHtml } from '../service/approvalpack.js'
 import { verifyPageToken, publishToPage, checkPagePost, cancelPagePost } from '../service/meta.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
+// An app opened from Finder gets a short PATH (/usr/bin:/bin:/usr/sbin:/sbin), so Claude Code, Codex, Hermes and what
+// they need (node, git) would not be found; add the usual install folders, as IV Studio does.
+if (process.platform === 'darwin') process.env.PATH = [...new Set([...String(process.env.PATH || '').split(':'), ...EXTRA_BIN()].filter(Boolean))].join(':')
 const APP = 'IV Signal'
 let db
 let win
@@ -384,7 +387,7 @@ const METHODS = {
   metaStatus: ({ brand_id }) => metaView(brand_id),
   metaConnect: async ({ brand_id, token }) => {
     sg.requireBrand(getDb(), brand_id)
-    if (!safeStorage.isEncryptionAvailable()) throw new Error('This PC can’t encrypt the token, so IV Signal won’t store it.')
+    if (!safeStorage.isEncryptionAvailable()) throw new Error(process.platform === 'darwin' ? 'The macOS Keychain isn’t available to IV Signal, so it won’t store the token.' : 'This PC can’t encrypt the token, so IV Signal won’t store it.')
     const page = await verifyPageToken(token)
     const meta = { ...(readSettings().meta || {}) }
     meta[brand_id] = { ...page, tokenEnc: safeStorage.encryptString(String(token).trim()).toString('base64'), connectedAt: new Date().toISOString() }

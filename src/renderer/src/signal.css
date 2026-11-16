@@ -182,3 +182,7 @@
 .net-section .channel-form { display: grid; gap: 10px; margin-top: 10px; }
 .net-section .channel-form label { display: grid; gap: 4px; }
 .fb-connect .fb-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+
+/* a Mac: the traffic lights sit at the left of the title bar (trafficLightPosition in main), nothing at the right */
+html.mac .titlebar-brand { padding-left: 84px; }
+html.mac .titlebar-mid { padding-right: 16px; }

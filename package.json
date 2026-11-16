@@ -17,11 +17,13 @@
     "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
     "mcp": "node src/mcp/server.js",
     "dist": "electron-vite build && electron-builder --win --x64 --publish never",
-    "dist:dir": "electron-vite build && electron-builder --win --x64 --dir --publish never"
+    "dist:dir": "electron-vite build && electron-builder --win --x64 --dir --publish never",
+    "dist:mac": "electron-vite build && electron-builder --mac --publish never"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
     "electron-updater": "6.8.9",
+    "js-yaml": "4.3.2",
     "zod": "3.25.76"
   },
   "devDependencies": {
@@ -64,6 +66,19 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "artifactName": "IV-Signal-Setup-${version}.exe"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.social-networking",
+      "artifactName": "IV-Signal-mac-${arch}.${ext}",
+      "minimumSystemVersion": "12.0"
+    },
+    "dmg": {
+      "title": "IV Signal"
     },
     "publish": [
       {

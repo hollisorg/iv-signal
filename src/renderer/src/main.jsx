@@ -16,4 +16,7 @@ for (const href of [
   document.head.appendChild(notice)
 }
 
+// a Mac draws its window buttons (the traffic lights) at the left of the title bar and nothing at the right
+if (/Mac/i.test(navigator.platform)) document.documentElement.classList.add('mac')
+
 createRoot(document.getElementById('root')).render(new URLSearchParams(location.search).has('chatWindow') ? <ChatWindow /> : <App />)
