@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hollisorg/iv-signal-releases/releases/latest"><b>Download for Windows</b></a>
+  <a href="https://github.com/hollisorg/iv-signal-releases/releases/latest"><b>Download for Windows or Mac</b></a>
   &nbsp;·&nbsp;
   <a href="#what-you-need">What you need</a>
   &nbsp;·&nbsp;
@@ -80,7 +80,7 @@ API key of its own. Everything stays on your PC.
 
 ## What you need
 
-- **Windows 10 or 11**, 64-bit.
+- **Windows 10 or 11**, 64-bit, or **macOS 12 or newer** on Apple Silicon or Intel.
 - **Your own agent for the chat:** [Claude Code](https://claude.com/claude-code),
   [Codex](https://openai.com/codex) or Hermes, signed in on your own plan. IV Signal finds the one you have
   (Settings → Your agent). Everything else works without one.
@@ -96,8 +96,14 @@ API key of its own. Everything stays on your PC.
 3. Open IV Signal and follow the guided setup: add your first brand, let the chat read your website or
    interview you for the Brand Brain, and add the networks you post to.
 
+**On a Mac:** download `IV-Signal-mac-arm64.dmg` (Apple Silicon) or `IV-Signal-mac-x64.dmg` (Intel) from the same page,
+open it and drag IV Signal into Applications. It isn't signed with an Apple Developer ID yet, so the first time
+macOS won't open it: go to **System Settings → Privacy & Security** and click **Open Anyway**. Open it from
+Applications (not the disk image) so it can update itself.
+
 IV Signal checks for a new version when it opens and every six hours, downloads it in the background and
-installs it when you restart. Your brands, posts and library are kept in `%APPDATA%\IV Signal`.
+installs it when you restart. Your brands, posts and library are kept in `%APPDATA%\IV Signal`
+(`~/Library/Application Support/IV Signal` on a Mac).
 
 ## Develop
 

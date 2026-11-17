@@ -54,7 +54,8 @@ run(process.execPath, ['scripts/packaged-check.mjs', join(root, 'dist', 'win-unp
 if (dry) { console.log(`Dry run: ${setup} built and checked; nothing published.`); process.exit(0) }
 
 run('git', ['tag', tag])
-run('git', ['push', 'origin', 'HEAD', tag])
+// releases come from main: this commit goes to main (fast-forward only), whatever the local branch is called
+run('git', ['push', 'origin', 'HEAD:main', tag])
 const mac = args.includes('--no-mac') ? [] : macFiles()
 run('gh', ['release', 'create', tag, setup, `${setup}.blockmap`, join(root, 'dist', 'latest.yml'), ...mac, '--repo', 'hollisorg/iv-signal-releases', '--latest', '--title', `IV Signal ${version}`, '--notes-file', existsSync(join(root, 'dist', `notes-${version}.md`)) ? join(root, 'dist', `notes-${version}.md`) : join(root, 'README.md')])
 if (mac.length) await checkPublicMacFeed()
