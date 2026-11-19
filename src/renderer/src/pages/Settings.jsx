@@ -1,14 +1,16 @@
 import PageStage from '../components/PageStage'
 import { useEffect, useState } from 'react'
-import { call, useData, when } from '../api'
+import { call, newsletterApi, useData, when } from '../api'
 import { AgentRows, useAgentSetup } from '../components/AgentSetup'
 import { BrandMark } from '../components/BrandIdentity'
 import UpdateSettings from '../components/UpdateSettings'
+import NewsletterBox from '../components/NewsletterBox'
 
 const TOPICS = [
   ['brands', 'Brands', 'Each brand has its own Brand Brain, posts, calendar and library.'],
   ['agent', 'Your agent', 'The chat runs on your own agent, shared across brands.'],
   ['connections', 'Other apps', 'Use IV Signal from Claude Code, Codex or Claude Desktop.'],
+  ['newsletter', 'The IV Newsletter', 'Optional. Nothing is sent unless you join here.'],
   ['updates', 'Updates', 'IV Signal keeps itself up to date, no setup needed.'],
   ['activity', 'Activity', 'Every change, and who made it.'],
   ['data', 'Your data', 'What IV Signal keeps, and where.'],
@@ -31,6 +33,7 @@ export default function Settings({ notify, openOnboarding, ...workspace }) {
     brands: <Brands {...workspace} />,
     agent: <Agent notify={notify} />,
     connections: <Connect notify={notify} />,
+    newsletter: <NewsletterBox api={newsletterApi} title={false} />,
     updates: <UpdateSettings notify={notify} />,
     activity: <Activity brand={workspace.brand} />,
     data: <YourData />,

@@ -1,3 +1,4 @@
+import { createNewsletter, fileStore, NEWSLETTER_PAGE } from './newsletter.js'
 import { workspaceHost } from '../service/iv-workspace-host.js'
 import { receiveSignal } from '../service/iv-workspace-import.js'
 import { app, BrowserWindow, ipcMain, shell, clipboard, dialog, nativeImage, protocol, net, safeStorage } from 'electron'
@@ -290,7 +291,21 @@ const ivWorkspace = workspaceHost({ appId: 'signal', dataDir: sg.defaultDataDir(
 })
 app.on('open-url', (event, url) => { event.preventDefault(); ivWorkspace.capture([url]) })
 
+// The IV Newsletter (src/main/newsletter.js, shared by every IV app): sends only an address typed and joined, keeps
+// only the join date. A copy with its own data folder (IV_SIGNAL_DATA_DIR) is a test copy: it only sends to IV_NEWSLETTER_URL.
+let newsletterInst = null
+const newsletter = () => newsletterInst || (newsletterInst = createNewsletter({
+  app: 'iv-signal',
+  version: app.getVersion(),
+  store: fileStore(join(app.getPath('userData'), 'newsletter.json')),
+  url: process.env.IV_SIGNAL_DATA_DIR ? process.env.IV_NEWSLETTER_URL || 'http://127.0.0.1:9/iv-newsletter' : undefined,
+}))
+
 const METHODS = {
+  newsletterStatus: () => newsletter().status(),
+  newsletterJoin: (input) => newsletter().join(input),
+  newsletterCloseCard: () => newsletter().closeCard(),
+  newsletterOpenPage: () => openOut(NEWSLETTER_PAGE),
   ivWorkspace: ({method,args}) => { if (!Object.hasOwn(ivWorkspace.api, method)) throw Error('Unknown workspace action.'); return ivWorkspace.api[method](args || {}) },
   // welcome
   onboardingStatus: () => onboardingStatus(getDb()),
