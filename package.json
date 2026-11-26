@@ -17,6 +17,7 @@
     "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
     "mcp": "node src/mcp/server.js",
     "dist": "electron-vite build && electron-builder --win --x64 --publish never",
+    "dist:win-release": "node scripts/windows-release.cjs",
     "dist:dir": "electron-vite build && electron-builder --win --x64 --dir --publish never",
     "dist:mac": "electron-vite build && electron-builder --mac --publish never"
   },

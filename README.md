@@ -125,3 +125,10 @@ How Hivemind handoffs work is in [docs/iv-workspace.md](docs/iv-workspace.md).
 
 MIT (see [LICENSE](LICENSE)). The Infinite Variance artwork is Infinite Variance's own and isn't covered by the MIT licence. The screenshots show
 Kiln & Co, a fictional brand made up for them.
+
+## Signed Windows release builds
+
+Run `npm run dist:win-release` on Windows to stage a signed installer, blockmap, and updater
+manifest in `dist/`. Use the Hollis Azure tenant in Azure CLI, with the .NET 10 x64 runtime
+and Windows SDK 22621 or newer installed. The release build checks the publisher, timestamp,
+and updater checksum before it succeeds. `npm run dist` is for unsigned development builds.
